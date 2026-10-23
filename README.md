@@ -10,7 +10,7 @@ When you're done, one click moves the rejects into a `_Rejects` folder inside yo
 
 Get the latest version from the [Releases page](https://github.com/fpvidre/last-shot-standing/releases/latest):
 
-- **Mac:** `Last Shot Standing-<version>-universal.dmg` (Apple Silicon and Intel)
+- **Mac:** `Last-Shot-Standing-<version>-universal.dmg` (Apple Silicon and Intel)
 - **Windows:** `Last-Shot-Standing-Setup-<version>.exe`
 
 ### First launch
@@ -54,7 +54,7 @@ npm test           # check the folder sorting
 npm run dist       # build an installer into dist/
 ```
 
-To publish a new version, bump `version` in `package.json`, then push a tag such as `v1.0.1`. GitHub Actions builds the Mac and Windows apps and attaches them to a release.
+To publish a new version, change `version` in `package.json` (for example to `1.0.1`) and push to `main`. GitHub Actions builds the Mac and Windows apps and publishes them as release `v1.0.1`.
 
 ---
 

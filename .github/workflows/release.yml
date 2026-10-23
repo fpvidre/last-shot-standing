@@ -1,10 +1,11 @@
 name: Build and release
 
-# Push a version tag (for example v1.0.1) and this builds the Mac and Windows
-# apps and attaches them to a GitHub Release people can download from.
+# Change "version" in package.json and push to main: this builds the Mac and
+# Windows apps and publishes them as a GitHub Release (for example v1.0.1).
 on:
   push:
-    tags: ['v*']
+    branches: [main]
+    paths: ['package.json']
   workflow_dispatch:
 
 permissions:
