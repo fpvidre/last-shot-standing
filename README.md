@@ -13,6 +13,10 @@ Get the latest version from the [Releases page](https://github.com/fpvidre/last-
 - **Mac:** `Last-Shot-Standing-<version>-universal.dmg` (Apple Silicon and Intel)
 - **Windows:** `Last-Shot-Standing-Setup-<version>.exe`
 
+### Updates
+
+The app checks for new versions when it opens. On Windows it downloads them in the background and installs when you quit. On Mac it shows a notice with a **Download** button; install the new version over the old one.
+
 ### First launch
 
 The app isn't code-signed yet, so your computer will warn you the first time.

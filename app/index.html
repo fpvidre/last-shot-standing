@@ -178,6 +178,12 @@ kbd{font-family:var(--font-data);font-size:11px;color:var(--fg);background:var(-
 #sortText{width:100%;height:120px;background:var(--well);color:var(--fg);border:1px solid var(--line);border-radius:3px;font:12px ui-monospace,Menlo,Consolas,monospace;box-sizing:border-box}
 .btn:disabled{opacity:.45;cursor:default}
 .desk .os-only{display:none!important}
+.upd{position:fixed;right:calc(16px + env(safe-area-inset-right,0px));bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:35;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px 14px;display:flex;align-items:center;gap:14px;max-width:min(440px,calc(100% - 32px));box-shadow:0 8px 24px rgba(0,0,0,.35);transition:opacity 200ms var(--ease-out),transform 200ms var(--ease-out)}
+.upd-text{display:grid;gap:2px;min-width:0}
+.upd-text #updMsg{font-weight:400}
+.upd-btns{display:flex;gap:6px;flex:none}
+@starting-style{.upd{opacity:0;transform:translateY(6px)}}
+@media (prefers-reduced-motion:reduce){.upd{transition:opacity 150ms ease}@starting-style{.upd{transform:none}}}
 .deskres{background:var(--well);border:1px solid var(--line);border-radius:5px;padding:14px 16px;display:grid;gap:10px}
 .deskres p{margin:0}
 .deskres .rbtns{margin:0}
@@ -530,6 +536,11 @@ Write-Host ''
 Write-Host "Done. Frames moved into ${destName}: $frames (files: $moved, counting matching JPG/XMP files)."
 if ($missing -gt 0) { Write-Host "Left alone because they weren't found or had changed: $missing" }
 </script>
+
+<div class="upd" id="upd" role="status" hidden>
+  <div class="upd-text"><span class="label">Update</span><span id="updMsg"></span></div>
+  <div class="upd-btns"><button class="btn primary" id="updGo"></button><button class="btn" id="updLater" aria-label="Dismiss">Later</button></div>
+</div>
 
 <div class="drop" id="drop" hidden><div>Drop a folder or photos<small>ARW · CR2 · CR3 · NEF · RAF · DNG · ORF · RW2 · JPG · HEIC</small></div></div>
 
@@ -1389,6 +1400,22 @@ $('#sortSave').onclick=async()=>{
 $('#sortCopy').onclick=()=>{const ta=$('#sortText');try{navigator.clipboard.writeText(ta.value).then(()=>toast('Script copied'),()=>{ta.focus();ta.select()})}catch(e){ta.focus();ta.select()}};
 
 
+
+/* updates (desktop app only) */
+if(window.lss&&window.lss.onUpdate){
+  window.lss.onUpdate(info=>{
+    const box=$('#upd');
+    if(info.ready){
+      $('#updMsg').textContent=`Version ${info.version} is downloaded and will install when you quit.`;
+      $('#updGo').textContent='Restart now'; $('#updGo').onclick=()=>window.lss.installUpdate();
+    }else{
+      $('#updMsg').textContent=`Version ${info.version} is out. You have ${info.current||'an older version'}.`;
+      $('#updGo').textContent='Download'; $('#updGo').onclick=()=>{window.lss.openDownload(info.url);box.hidden=true};
+    }
+    box.hidden=false;
+  });
+  $('#updLater').onclick=()=>{$('#upd').hidden=true};
+}
 
 /* status */
 let toastT=0;

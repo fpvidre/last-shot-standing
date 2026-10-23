@@ -7,4 +7,7 @@ contextBridge.exposeInMainWorld('lss', {
   sort: (job) => ipcRenderer.invoke('lss:sort', job),
   unsort: (moves) => ipcRenderer.invoke('lss:unsort', moves),
   reveal: (p) => ipcRenderer.invoke('lss:reveal', p),
+  onUpdate: (cb) => ipcRenderer.on('lss:update', (_e, info) => cb(info)),
+  openDownload: (url) => ipcRenderer.invoke('lss:open-download', url),
+  installUpdate: () => ipcRenderer.invoke('lss:update-install'),
 });
