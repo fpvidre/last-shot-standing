@@ -24,7 +24,7 @@ The app isn't code-signed yet, so your computer will warn you the first time.
 
 - **Rounds:** full-screen keep or reject, one frame at a time, until only keepers remain.
 - **Side by side:** press **C** to compare two frames. **Tab** switches which one 1 and 2 apply to.
-- **Zoom that holds:** press **Z** or click to check focus at 100%. The zoom stays on the same spot as you move through a burst.
+- **Deep zoom:** scroll or pinch to zoom up to 800%, centered on your pointer, or press **Z** or click to jump to 100%. Past 200% you see the real pixels, unsmoothed. The zoom holds on the same spot as you move through a burst.
 - **Bursts:** frames shot within a second of each other are grouped, with a dot for each frame in the top bar.
 - **Pick up later:** progress saves as you go. Import the same folder again to resume where you stopped.
 - **Sorting:** rejects (or keepers) move into their own folder along with matching .JPG and .XMP files. A file only moves if its name and size still match the cull.
@@ -38,7 +38,9 @@ Supports the embedded previews in Sony (ARW), Canon (CR2, CR3), Nikon (NEF), Fuj
 | 2 | Keep |
 | 1 | Reject |
 | → / ← | Skip / back |
-| Z or Space | Zoom to 100% |
+| Z or Space | Zoom to 100% / back to fit |
+| + / − | Zoom in / out a step (up to 800%) |
+| Scroll or pinch | Zoom on the spot under your pointer |
 | C | Side by side |
 | Tab | Switch side |
 | Backspace | Undo |
