@@ -1,0 +1,81 @@
+{
+  "name": "last-shot-standing",
+  "productName": "Last Shot Standing",
+  "version": "1.0.0",
+  "description": "Cull a photo shoot in rounds: keep or reject until only the best shots are left.",
+  "main": "main.js",
+  "author": "FPVI Productions",
+  "license": "MIT",
+  "homepage": "https://github.com/fpvidre/last-shot-standing",
+  "scripts": {
+    "start": "electron .",
+    "test": "node test/sort.test.js",
+    "dist": "electron-builder",
+    "release": "electron-builder --publish always"
+  },
+  "devDependencies": {
+    "electron": "33.2.1",
+    "electron-builder": "25.1.8"
+  },
+  "build": {
+    "appId": "com.lastshotstanding.app",
+    "productName": "Last Shot Standing",
+    "copyright": "\u00a9 2026 FPVI Productions",
+    "files": [
+      "main.js",
+      "preload.js",
+      "sort.js",
+      "app/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "buildResources": "build",
+      "output": "dist"
+    },
+    "mac": {
+      "category": "public.app-category.photography",
+      "icon": "build/icon.icns",
+      "identity": "-",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "universal"
+          ]
+        }
+      ]
+    },
+    "dmg": {
+      "title": "Last Shot Standing"
+    },
+    "win": {
+      "icon": "build/icon.png",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": true,
+      "artifactName": "Last-Shot-Standing-Setup-${version}.${ext}"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "fpvidre",
+        "repo": "last-shot-standing",
+        "releaseType": "release"
+      }
+    ]
+  }
+}

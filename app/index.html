@@ -1,0 +1,1446 @@
+<title>Last Shot Standing</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' blob: data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; font-src 'self'">
+<style>
+@font-face{font-family:'Montserrat';font-style:normal;font-weight:500;font-display:swap;src:url('fonts/montserrat-latin-500-normal.woff2') format('woff2')}
+@font-face{font-family:'Montserrat';font-style:normal;font-weight:600;font-display:swap;src:url('fonts/montserrat-latin-600-normal.woff2') format('woff2')}
+@font-face{font-family:'Montserrat';font-style:normal;font-weight:700;font-display:swap;src:url('fonts/montserrat-latin-700-normal.woff2') format('woff2')}
+@font-face{font-family:'Montserrat';font-style:normal;font-weight:800;font-display:swap;src:url('fonts/montserrat-latin-800-normal.woff2') format('woff2')}
+@font-face{font-family:'Montserrat';font-style:normal;font-weight:900;font-display:swap;src:url('fonts/montserrat-latin-900-normal.woff2') format('woff2')}
+@font-face{font-family:'Ubuntu';font-style:normal;font-weight:300;font-display:swap;src:url('fonts/ubuntu-latin-300-normal.woff2') format('woff2')}
+@font-face{font-family:'Ubuntu';font-style:normal;font-weight:400;font-display:swap;src:url('fonts/ubuntu-latin-400-normal.woff2') format('woff2')}
+@font-face{font-family:'Ubuntu';font-style:normal;font-weight:500;font-display:swap;src:url('fonts/ubuntu-latin-500-normal.woff2') format('woff2')}
+@font-face{font-family:'Ubuntu';font-style:normal;font-weight:700;font-display:swap;src:url('fonts/ubuntu-latin-700-normal.woff2') format('woff2')}
+/* Layout: one-screen culling desk. Top bar (import, filters, view) / work area (grid or loupe + filmstrip, metadata rail) / action bar.
+   Single dark theme on purpose: backgrounds are true neutral greys so the eye judges exposure and color without a tint. */
+:root{
+  --bg:#2b2b2b;
+  --panel:#212121;
+  --well:#1a1a1a;
+  --line:#3b3b3b;
+  --fg:#f2f2ef;
+  --muted:#a0a0a0;
+  --dim:#6e6e6e;
+  --mark:#9cc0c4;      /* light blue: selection, frame numbers, stars */
+  --brand:#9cc0c4;     /* light blue: primary buttons, with off-black text */
+  --brand-hi:#b6d2d5;
+  --brand-ink:#161818; /* off-black */
+  --pick:#f5f5f5;
+  --reject:#e5534b;
+  --void:#141414;
+  --ease-out:cubic-bezier(0.23,1,0.32,1);      /* rounds mode surround */
+  --font-display:"Montserrat","Helvetica Neue",Arial,sans-serif;   /* headings, buttons, flags: 600-900 */
+  --font-ui:"Ubuntu","Segoe UI",system-ui,sans-serif;                /* body and controls: 300-500 */
+  --font-data:"Ubuntu","Segoe UI",system-ui,sans-serif;              /* file names, numbers: 500 + tabular figures */
+  --cell:190px;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-ui);font-size:14px;overflow:hidden;-webkit-font-smoothing:antialiased}
+button,select{font:inherit;color:inherit}
+.app{height:100%;display:grid;grid-template-rows:auto auto 1fr auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));min-height:0}
+
+/* top bar */
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding-block:10px;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:baseline;gap:10px;margin-right:auto}
+.brand h1{margin:0;font-size:17px;font-weight:600;letter-spacing:.02em}
+.brand .count{font-family:var(--font-data);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.group{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:3px;padding:6px 11px;cursor:pointer;line-height:1.2;white-space:nowrap}
+@media (hover:hover) and (pointer:fine){.btn:hover{border-color:var(--dim)}}
+.btn:focus-visible,.seg button:focus-visible,select:focus-visible,.cell:focus-visible{outline:2px solid var(--mark);outline-offset:2px}
+.btn.primary{background:var(--brand);color:var(--brand-ink);border-color:var(--brand);font-weight:600}
+@media (hover:hover) and (pointer:fine){.btn.primary:hover{background:var(--brand-hi);border-color:var(--brand-hi)}}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:3px;overflow:hidden}
+.seg button{background:var(--panel);border:0;border-right:1px solid var(--line);padding:6px 10px;cursor:pointer;white-space:nowrap}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--fg);color:#1a1a1a;font-weight:600}
+.seg .n{font-family:var(--font-data);font-size:11px;opacity:.7;margin-left:4px;font-variant-numeric:tabular-nums}
+select{background:var(--panel);border:1px solid var(--line);border-radius:3px;padding:6px 8px}
+.label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+input[type=range]{accent-color:var(--mark);width:90px}
+
+.banner{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;padding-block:8px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--line)}
+.banner strong{color:var(--mark);font-weight:500}
+
+/* work area */
+.work{display:grid;grid-template-columns:minmax(0,1fr) 250px;min-height:0;position:relative}
+.main{min-width:0;min-height:0;display:grid}
+.gridwrap{overflow:auto;padding-block:14px;padding-right:14px;min-height:0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--cell),1fr));gap:10px}
+.cell{background:var(--panel);border-radius:3px;padding:6px;cursor:pointer;outline:2px solid transparent;outline-offset:0;display:grid;gap:6px;position:relative;user-select:none}
+.cell.sel{outline-color:var(--mark)}
+.cell[data-f="-1"] .ph img{opacity:.3}
+.ph{aspect-ratio:3/2;background:var(--well);display:grid;place-items:center;overflow:hidden;max-width:100%;position:relative}
+.ph img{width:100%;height:100%;object-fit:contain;display:block}
+.ph .wait{font-family:var(--font-data);font-size:11px;color:var(--dim)}
+.tag{position:absolute;top:6px;left:6px;font-family:var(--font-data);font-size:10px;font-weight:500;letter-spacing:.06em;padding:2px 5px;border-radius:2px}
+.tag.pick{background:var(--pick);color:#1a1a1a}
+.tag.rej{background:var(--reject);color:#fff}
+.cmeta{display:flex;justify-content:space-between;align-items:center;gap:8px;font-family:var(--font-data);font-size:11px;min-width:0}
+.fno{color:var(--mark);font-variant-numeric:tabular-nums}
+.fname{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1}
+.stars{color:var(--mark);letter-spacing:1px;white-space:nowrap}
+.empty{display:grid;place-items:center;padding:60px 20px;text-align:center;color:var(--muted)}
+.empty p{max-width:42ch;margin:6px auto 0;line-height:1.5}
+
+.loupe{display:grid;grid-template-rows:minmax(0,1fr) auto;min-height:0;padding-block:12px;padding-right:14px;gap:10px}
+.stage{position:relative;overflow:hidden;background:var(--well);border-radius:3px;cursor:zoom-in;touch-action:none;min-height:200px}
+.stage.zoomed{cursor:grab}
+.stage.drag{cursor:grabbing}
+#lim{position:absolute;transform-origin:center center;user-select:none;-webkit-user-drag:none;max-width:none}
+.hud{position:absolute;left:10px;top:10px;display:flex;gap:8px;align-items:center;font-family:var(--font-data);font-size:12px;background:rgba(20,20,20,.72);padding:5px 9px;border-radius:3px;pointer-events:none}
+.hud .z{color:var(--muted)}
+.strip{display:flex;gap:4px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+.strip button{flex:0 0 auto;height:58px;padding:0;border:2px solid transparent;border-radius:2px;background:var(--well);cursor:pointer;position:relative}
+.strip button.sel{border-color:var(--mark)}
+.strip img{height:100%;display:block}
+.strip button[data-f="-1"] img{opacity:.3}
+.strip button[data-f="1"]::after{content:"";position:absolute;top:3px;left:3px;width:6px;height:6px;background:var(--pick);border-radius:50%}
+
+aside.info{border-left:1px solid var(--line);padding:14px 0 14px 14px;overflow:auto;display:grid;align-content:start;gap:18px;min-height:0;background:var(--bg)}
+.info h2{margin:0 0 6px;font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.info .fn{font-family:var(--font-data);font-size:13px;word-break:break-all}
+dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:5px 12px;font-size:13px}
+dt{color:var(--muted)}
+dd{margin:0;font-family:var(--font-data);font-size:12px;font-variant-numeric:tabular-nums;min-width:0;overflow-wrap:anywhere}
+.expo{font-family:var(--font-data);font-size:15px;font-variant-numeric:tabular-nums}
+.tally{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+.tally div{background:var(--panel);border-radius:3px;padding:7px 9px}
+.tally b{display:block;font-family:var(--font-data);font-size:17px;font-weight:500;font-variant-numeric:tabular-nums}
+.tally span{font-size:12px;color:var(--muted)}
+.keys{display:grid;grid-template-columns:auto 1fr;gap:5px 10px;font-size:12.5px;color:var(--muted)}
+kbd{font-family:var(--font-data);font-size:11px;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-bottom-width:2px;border-radius:3px;padding:1px 5px;white-space:nowrap;justify-self:start}
+
+/* action bar */
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding-block:9px;border-top:1px solid var(--line)}
+.bar .act{display:flex;gap:6px;flex-wrap:wrap}
+.btn.rej{color:var(--reject)}
+.btn.on-pick{background:var(--pick);color:#1a1a1a;border-color:var(--pick)}
+.btn.on-rej{background:var(--reject);color:#fff;border-color:var(--reject)}
+.starbtns{display:inline-flex;gap:2px}
+.starbtns button{background:none;border:0;font-size:19px;line-height:1;padding:2px 3px;color:var(--dim);cursor:pointer}
+.starbtns button.on{color:var(--mark)}
+.status{margin-left:auto;display:flex;align-items:center;gap:10px;font-family:var(--font-data);font-size:12px;color:var(--muted);min-width:0}
+.prog{width:120px;height:4px;background:var(--panel);border-radius:2px;overflow:hidden}
+.prog i{display:block;height:100%;width:100%;background:var(--mark);transform:scaleX(0);transform-origin:left center;transition:transform 200ms var(--ease-out)}
+
+.drop{position:fixed;inset:0;background:rgba(20,20,20,.86);display:grid;place-items:center;z-index:20;pointer-events:none}
+.drop div{border:2px dashed var(--mark);border-radius:6px;padding:40px 56px;text-align:center;font-size:18px}
+.drop small{display:block;color:var(--muted);font-size:13px;margin-top:6px;font-family:var(--font-data)}
+.toast{position:fixed;left:50%;bottom:calc(70px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:#1a1a1a;padding:8px 14px;border-radius:3px;font-weight:500;z-index:30;max-width:calc(100% - 32px)}
+.copybox{position:fixed;inset:auto 16px calc(70px + env(safe-area-inset-bottom,0px)) 16px;max-width:560px;margin-inline:auto;background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:12px;z-index:30;display:grid;gap:8px}
+.copybox textarea{width:100%;height:140px;background:var(--well);color:var(--fg);border:1px solid var(--line);font-family:var(--font-data);font-size:12px;box-sizing:border-box}
+
+/* rounds mode: full-screen decide loop */
+.rounds{position:fixed;inset:0;z-index:15;background:var(--void);display:grid;grid-template-rows:auto minmax(0,1fr) auto;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.rtop{display:flex;flex-wrap:wrap;align-items:center;gap:6px 18px;padding-block:10px;font-family:var(--font-data);font-size:13px;font-variant-numeric:tabular-nums}
+.rround{color:var(--mark);font-weight:500;letter-spacing:.08em;text-transform:uppercase}
+.rname{color:var(--muted);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.rtally{color:var(--muted)}
+.rtally b{color:var(--fg);font-weight:500}
+.rtop .btn{font-family:var(--font-ui)}
+.rstage{position:relative;overflow:hidden;cursor:zoom-in;touch-action:none}
+.rstage.zoomed{cursor:grab}
+#rimg,#rimg2{position:absolute;transform-origin:center center;user-select:none;-webkit-user-drag:none;max-width:none}
+.rpane{position:absolute;top:0;bottom:0;left:0;width:100%;overflow:hidden}
+.rpane::after{content:"";position:absolute;inset:0;border:2px solid transparent;border-radius:3px;pointer-events:none}
+.rpane.active::after{border-color:var(--mark)}
+.rlab{position:absolute;left:8px;top:8px;z-index:1;display:flex;align-items:center;gap:7px;max-width:calc(100% - 16px);background:rgba(20,20,20,.8);padding:4px 8px;border-radius:3px;font-size:12px;font-weight:500;cursor:pointer;color:var(--muted)}
+.rlab.on{color:var(--fg)}
+.rlab .ln{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.rempty{position:absolute;inset:0;display:grid;place-items:center;color:var(--dim);font-size:14px;padding:16px;text-align:center}
+.rburst{display:inline-flex;align-items:center;gap:7px;font-size:12px}
+.rburst .label{font-size:10px}
+.dots{display:inline-flex;gap:4px;align-items:center}
+.dots i{width:7px;height:7px;border-radius:50%;background:var(--dim)}
+.dots i.k{background:var(--pick)}
+.dots i.x{background:var(--reject)}
+.dots i.cur{outline:2px solid var(--mark);outline-offset:1px}
+.dots i.pair{outline:1px solid var(--muted);outline-offset:1px}
+.ricon[aria-pressed="true"]{color:var(--mark)}
+.sheetwrap{position:fixed;inset:0;z-index:40;background:rgba(10,10,10,.72);display:grid;place-items:center;padding:16px;overflow:auto}
+.sheet{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:24px 26px;max-width:560px;width:100%;box-sizing:border-box;display:grid;gap:12px}
+.sheet h2{margin:0;font-family:var(--font-display);font-weight:900;font-size:28px;letter-spacing:-.015em;line-height:1.05;text-wrap:balance}
+.sheet p{margin:0;color:var(--muted);line-height:1.5;font-weight:300}
+.sheet p b{color:var(--fg);font-weight:500}
+.opts{display:flex;flex-wrap:wrap;gap:12px 32px}
+.opts fieldset{border:0;margin:0;padding:0;display:grid;gap:7px}
+.opts legend{padding:0;margin-bottom:4px}
+.opts label{display:flex;align-items:center;gap:8px;cursor:pointer}
+.opts input{accent-color:var(--mark);margin:0}
+.steps{margin:0;padding-left:20px;display:grid;gap:8px;line-height:1.55;font-weight:300;color:var(--muted)}
+.steps code{font-family:ui-monospace,Menlo,Consolas,monospace;background:var(--well);border:1px solid var(--line);border-radius:3px;padding:1px 5px;font-size:12.5px;color:var(--fg);white-space:pre}
+.fallback{display:grid;gap:8px}
+.steps b{color:var(--fg);font-weight:500}
+.steps li.alt{list-style:none;margin-left:-20px;margin-top:4px;font-size:13px;color:var(--dim)}
+#sortText{width:100%;height:120px;background:var(--well);color:var(--fg);border:1px solid var(--line);border-radius:3px;font:12px ui-monospace,Menlo,Consolas,monospace;box-sizing:border-box}
+.btn:disabled{opacity:.45;cursor:default}
+.desk .os-only{display:none!important}
+.deskres{background:var(--well);border:1px solid var(--line);border-radius:5px;padding:14px 16px;display:grid;gap:10px}
+.deskres p{margin:0}
+.deskres .rbtns{margin:0}
+.rchip{font-size:11px;font-weight:500;letter-spacing:.06em;padding:2px 6px;border-radius:2px}
+.rchip.k{background:var(--pick);color:#1a1a1a}
+.rchip.x{background:var(--reject);color:#fff}
+.rflash{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-family:var(--font-data);font-size:26px;font-weight:500;letter-spacing:.12em;padding:10px 20px;border-radius:4px;opacity:0;pointer-events:none}
+.rflash.k{background:var(--pick);color:#1a1a1a;animation:flash .38s ease-out}
+.rflash.x{background:var(--reject);color:#fff;animation:flash .38s ease-out}
+@keyframes flash{0%,60%{opacity:.95}100%{opacity:0}}
+.rbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding-block:10px}
+.rprog{flex:1 0 100%;height:3px;background:var(--panel);border-radius:2px;overflow:hidden}
+.rprog i{display:block;height:100%;width:0;background:var(--mark)}
+.btn.big{padding:10px 22px;font-size:16px}
+.btn.keep{background:var(--pick);color:#1a1a1a;border-color:var(--pick);font-weight:600}
+.btn.drop2{background:var(--panel);color:var(--reject);border-color:var(--reject);font-weight:600}
+.rhints{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--muted);margin-left:auto}
+.rhints{align-items:center;gap:2px!important}
+.ricon{display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid transparent;border-radius:3px;padding:4px 5px;color:var(--muted);cursor:pointer;font:inherit}
+@media (hover:hover) and (pointer:fine){.ricon:hover{color:var(--fg);border-color:var(--line);background:var(--panel)}}
+.ricon:focus-visible{outline:2px solid var(--mark);outline-offset:2px}
+.ricon.static{cursor:default}
+@media (hover:hover) and (pointer:fine){.ricon.static:hover{background:none;border-color:transparent;color:var(--muted)}}
+.ricon svg{flex:none}
+.rcard{position:absolute;inset:0;display:grid;place-items:center;background:rgba(14,14,14,.86);z-index:2;padding:16px}
+.rbox{background:var(--panel);border:1px solid var(--line);border-radius:5px;padding:26px 28px;max-width:440px;display:grid;gap:10px}
+.rbox h2{margin:0;font-size:24px;font-weight:600;text-wrap:balance}
+.rbox p{margin:0;color:var(--muted);line-height:1.5}
+.rbtns{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+@media (max-width:560px){.rhints{display:none}.rname{flex-basis:100%}}
+
+@media (max-width:900px){
+  .work{grid-template-columns:minmax(0,1fr)}
+  aside.info{position:absolute;right:0;top:0;bottom:0;width:min(280px,85%);z-index:5;box-shadow:-8px 0 24px rgba(0,0,0,.4);padding-right:12px}
+  aside.info:not(.open){display:none}
+  .gridwrap,.loupe{padding-right:0}
+}
+@media (min-width:901px){ aside.info.closed{display:none} .work:has(aside.closed){grid-template-columns:minmax(0,1fr)} }
+@media (max-width:560px){
+  :root{--cell:140px}
+  .status .hint{display:none}
+  .sizer{display:none}
+}
+@media (prefers-reduced-motion:reduce){.prog i{transition:none}}
+
+/* type blend: Montserrat speaks, Ubuntu works */
+body{font-weight:400}
+.brand h1{font-family:var(--font-display);font-weight:900;font-size:19px;letter-spacing:-.01em}
+.btn{font-family:var(--font-ui);font-weight:500}
+.btn.primary,.btn.big,.btn.keep,.btn.drop2{font-family:var(--font-display);font-weight:700;letter-spacing:.01em}
+.btn.big{font-weight:800}
+.seg button{font-weight:500}
+.seg button[aria-pressed="true"]{font-family:var(--font-display);font-weight:700}
+.label,.info h2{font-family:var(--font-display);font-weight:700;letter-spacing:.12em}
+.fno{font-family:var(--font-display);font-weight:700}
+.fname,.rname,.info .fn,dd,.cmeta,.hud,.status,.strip,.rtop{font-weight:500}
+.dt,dt{font-weight:300}
+.expo{font-weight:500;font-size:16px}
+.tally b{font-family:var(--font-display);font-weight:800;font-size:19px}
+.tally span,.keys,.banner,.rhints{font-weight:300}
+.banner strong{font-family:var(--font-display);font-weight:700}
+.tag,.rchip{font-family:var(--font-display);font-weight:800;letter-spacing:.08em}
+.rround{font-family:var(--font-display);font-weight:900;font-size:15px;letter-spacing:.14em}
+.rtally b{font-family:var(--font-display);font-weight:800}
+.rflash{font-family:var(--font-display);font-weight:900;font-size:34px;letter-spacing:.14em}
+.rbox h2{font-family:var(--font-display);font-weight:900;font-size:34px;letter-spacing:-.015em;line-height:1.05}
+.rbox p{font-weight:300;font-size:15px}
+.rbox p kbd{font-weight:500}
+.empty b{font-family:var(--font-display);font-weight:800;font-size:17px;color:var(--fg)}
+.empty p{font-weight:300}
+.drop div{font-family:var(--font-display);font-weight:800}
+.drop small{font-family:var(--font-ui);font-weight:400}
+kbd{font-family:var(--font-ui);font-weight:500}
+.toast{font-family:var(--font-display);font-weight:700}
+.rlast{display:inline-flex;align-items:center;gap:6px}
+
+/* motion: press feedback on pointer, quiet color easing, entrances only for rare moments */
+.btn,.ricon,.seg button,.starbtns button{transition:transform 140ms var(--ease-out),background-color 120ms ease,border-color 120ms ease,color 120ms ease}
+.btn:active,.ricon:not(.static):active,.seg button:active,.starbtns button:active{transform:scale(0.97)}
+.rcard{transition:opacity 180ms var(--ease-out)}
+/* spacing pass */
+.rounds{row-gap:8px}
+.btn.primary kbd{background:rgba(22,24,24,.1);border-color:rgba(22,24,24,.25);color:var(--brand-ink)}
+.btn.big:not(.primary):not(.keep):not(.drop2){font-family:var(--font-ui);font-weight:500}
+.rbox .label+h2,.sheet .label+h2{margin-top:-6px}
+.rbox p{margin-top:2px}
+.dots{gap:6px}
+.rtop{gap:6px 20px}
+.rlab{transition:color 120ms ease,background-color 120ms ease}
+@media (hover:hover) and (pointer:fine){.rlab:hover{color:var(--fg);background:rgba(20,20,20,.92)}}
+@media (max-width:1180px){.status .hint{display:none}}
+.rbox{transition:transform 220ms var(--ease-out),opacity 220ms var(--ease-out)}
+.toast{transition:opacity 200ms var(--ease-out),transform 200ms var(--ease-out)}
+.sheet{transition:transform 220ms var(--ease-out),opacity 220ms var(--ease-out)}
+@starting-style{
+  .rcard{opacity:0}
+  .rbox:not(.still){opacity:0;transform:scale(0.96)}
+  .toast{opacity:0;transform:translate(-50%,6px)}
+  .sheet{opacity:0;transform:scale(0.96)}
+}
+@media (prefers-reduced-motion:reduce){
+  .btn:active,.ricon:not(.static):active,.seg button:active,.starbtns button:active{transform:none}
+  .rbox{transition:opacity 150ms ease}
+  .toast{transition:opacity 150ms ease}
+  .prog i{transition:none}
+  .sheet{transition:opacity 150ms ease}
+  @starting-style{.rbox:not(.still){transform:none}.toast{transform:translateX(-50%)}.sheet{transform:none}}
+}
+</style>
+
+<div class="app" id="app">
+  <header class="top">
+    <div class="brand"><h1>Last Shot Standing</h1><span class="count" id="count">0 frames</span></div>
+    <div class="group">
+      <label class="btn" for="pickDir">Import folder</label>
+      <input type="file" id="pickDir" webkitdirectory directory multiple hidden>
+      <label class="btn" for="pickFiles">Add files</label>
+      <input type="file" id="pickFiles" multiple hidden accept=".arw,.sr2,.srf,.cr2,.cr3,.crw,.nef,.nrw,.raf,.dng,.orf,.rw2,.rwl,.pef,.3fr,.fff,.iiq,.raw,.jpg,.jpeg,.heic,.heif,.png,.webp">
+    </div>
+    <div class="group" role="group" aria-label="Show">
+      <div class="seg" id="filters">
+        <button data-f="all" aria-pressed="true">All<span class="n" id="nAll">0</span></button>
+        <button data-f="pick" aria-pressed="false">Keepers<span class="n" id="nPick">0</span></button>
+        <button data-f="unflag" aria-pressed="false">Unflagged<span class="n" id="nUn">0</span></button>
+        <button data-f="rej" aria-pressed="false">Rejects<span class="n" id="nRej">0</span></button>
+      </div>
+      <select id="minStars" aria-label="Minimum rating">
+        <option value="0">Any rating</option><option value="1">★ 1+</option><option value="2">★ 2+</option>
+        <option value="3">★ 3+</option><option value="4">★ 4+</option><option value="5">★ 5</option>
+      </select>
+    </div>
+    <div class="group">
+      <div class="seg" id="views">
+        <button data-v="grid" aria-pressed="true">Grid</button>
+        <button data-v="loupe" aria-pressed="false">Loupe</button>
+      </div>
+      <span class="sizer group"><span class="label">Size</span><input type="range" id="size" min="120" max="340" value="190" aria-label="Thumbnail size"></span>
+      <button class="btn" id="infoBtn" title="Show or hide info (I)">Info</button>
+      <button class="btn primary" id="roundsBtn" title="Return to the keep/reject loop (F)">Back to rounds</button>
+    </div>
+  </header>
+
+  <div class="banner" id="banner"><strong>Sample shoot</strong><span>These are generated example frames. Import a folder of RAWs to start your own cull.</span></div>
+
+  <div class="work">
+    <div class="main">
+      <div class="gridwrap" id="gridwrap"><div class="grid" id="grid"></div></div>
+      <div class="loupe" id="loupe" hidden>
+        <div class="stage" id="stage"><img id="lim" alt=""><div class="hud" id="hud"></div></div>
+        <div class="strip" id="strip"></div>
+      </div>
+    </div>
+    <aside class="info" id="info">
+      <section>
+        <h2>Frame</h2>
+        <div class="fn" id="iName">—</div>
+      </section>
+      <section>
+        <h2>Exposure</h2>
+        <div class="expo" id="iExpo">—</div>
+      </section>
+      <section>
+        <dl id="iMeta"></dl>
+      </section>
+      <section>
+        <h2>This cull</h2>
+        <div class="tally">
+          <div><b id="tPick">0</b><span>keepers</span></div>
+          <div><b id="tRej">0</b><span>rejects</span></div>
+          <div><b id="tUn">0</b><span>left to flag</span></div>
+          <div><b id="tStar">0</b><span>rated</span></div>
+        </div>
+      </section>
+      <section>
+        <h2>Keys</h2>
+        <div class="keys">
+          <kbd>← →</kbd><span>Previous / next</span>
+          <kbd>2</kbd><span>Keep</span>
+          <kbd>1</kbd><span>Reject</span>
+          <kbd>U</kbd><span>Clear flag</span>
+          <kbd>F</kbd><span>Back to rounds</span>
+          <kbd>Shift 1–5</kbd><span>Stars (Shift 0 clears)</span>
+          <kbd>Enter</kbd><span>Loupe</span>
+          <kbd>G</kbd><span>Grid</span>
+          <kbd>Z</kbd><span>Zoom to 100%</span>
+          <kbd>R</kbd><span>Rotate (Shift+R back)</span>
+          <kbd>A</kbd><span>Auto-advance on/off</span>
+          <kbd>⌘/Ctrl Z</kbd><span>Undo</span>
+          <kbd>I</kbd><span>Info panel</span>
+        </div>
+      </section>
+    </aside>
+  </div>
+
+  <footer class="bar">
+    <div class="act">
+      <button class="btn" id="bPick">Keep <kbd>2</kbd></button>
+      <button class="btn rej" id="bRej">Reject <kbd>1</kbd></button>
+      <button class="btn" id="bUn">Clear <kbd>U</kbd></button>
+    </div>
+    <div class="starbtns" id="starbtns" aria-label="Star rating">
+      <button data-s="1" aria-label="1 star">★</button><button data-s="2" aria-label="2 stars">★</button><button data-s="3" aria-label="3 stars">★</button><button data-s="4" aria-label="4 stars">★</button><button data-s="5" aria-label="5 stars">★</button>
+    </div>
+    <button class="btn" id="bAuto" aria-pressed="true">Auto-advance: on</button>
+    <button class="btn" id="bCopy" title="Copy the file names currently shown">Copy file names</button>
+    <button class="btn" id="bSort">Sorting file</button>
+    <div class="status"><span id="msg" class="hint">Press F to go back to rounds.</span><div class="prog" id="prog" hidden><i id="progI"></i></div></div>
+  </footer>
+</div>
+
+<div class="rounds" id="rounds">
+  <div class="rtop">
+    <span class="rround" id="rRound">Round 1</span>
+    <span id="rPos">1 / 1</span>
+    <span class="rname" id="rName"></span>
+    <span class="rburst" id="rBurst"></span>
+    <span class="rlast" id="rLast"></span>
+    <span class="rtally" id="rTally"></span>
+    <label class="btn" for="pickDir">Import folder</label>
+    <button class="btn" id="rExit">Grid <kbd>G</kbd></button>
+  </div>
+  <div class="rstage" id="rstage"><div class="rpane" id="rpaneL"><img id="rimg" alt=""><div class="rlab" id="rlabL" hidden></div></div><div class="rpane" id="rpaneR" hidden><img id="rimg2" alt=""><div class="rempty" id="rEmptyR" hidden>No more undecided frames in this round</div><div class="rlab" id="rlabR" hidden></div></div><div class="rcard" id="rCard"><div class="rbox"><span class="label">Last Shot Standing</span><h2>Getting the sample shoot ready…</h2></div></div></div>
+  <div class="rbar">
+    <div class="rprog"><i id="rProgI"></i></div>
+    <button class="btn big drop2" id="rRej">Reject <kbd>1</kbd></button>
+    <button class="btn big keep" id="rKeep">Keep <kbd>2</kbd></button>
+    <div class="rhints">
+      <button class="ricon" id="rBack" title="Back (←)" aria-label="Back"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="18 5 8 12 18 19" fill="currentColor" stroke="none"/><line x1="6" y1="5" x2="6" y2="19"/></svg><kbd>←</kbd></button>
+      <button class="ricon" id="rSkip" title="Skip (→)" aria-label="Skip"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="6 5 16 12 6 19" fill="currentColor" stroke="none"/><line x1="18" y1="5" x2="18" y2="19"/></svg><kbd>→</kbd></button>
+      <span class="ricon static"><kbd>Z</kbd> <span id="rZoomV">Fit</span></span>
+      <button class="ricon" id="rTwoB" title="Side by side (C)" aria-label="Side by side" aria-pressed="false"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="8" height="14" rx="1"/><rect x="13" y="5" width="8" height="14" rx="1"/></svg><kbd>C</kbd></button>
+      <button class="ricon" id="rUndoB" title="Undo (Backspace)" aria-label="Undo"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg><kbd>⌫</kbd></button>
+      <button class="ricon" id="rGridB" title="Grid (G)" aria-label="Grid"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/></svg><kbd>G</kbd></button>
+    </div>
+  </div>
+</div>
+
+<div class="sheetwrap" id="sortSheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sortTitle">
+    <span class="label">Sorting file</span>
+    <h2 id="sortTitle">Sort the shoot folder</h2>
+    <div class="opts">
+      <fieldset><legend class="label">Move</legend>
+        <label><input type="radio" name="sortMode" id="smRej" value="rej" checked> Rejects into <b>_Rejects</b></label>
+        <label><input type="radio" name="sortMode" id="smKeep" value="keep"> Keepers into <b>Selects</b></label>
+      </fieldset>
+      <fieldset class="os-only"><legend class="label">Computer</legend>
+        <label><input type="radio" name="sortOs" id="soMac" value="mac"> Mac</label>
+        <label><input type="radio" name="sortOs" id="soWin" value="win"> Windows</label>
+      </fieldset>
+    </div>
+    <p id="sortSummary"></p>
+    <div class="rbtns"><button class="btn primary big" id="sortSave">Save sorting file</button><button class="btn big" id="sortClose">Close</button></div>
+    <span class="label os-only">Then run it</span>
+    <ol class="steps os-only" id="sortSteps"></ol>
+    <div class="deskres" id="sortResult" hidden></div>
+    <div id="sortFallback" class="fallback" hidden>
+      <p>This view can’t save files, so here’s the script instead. Copy it, paste it into a plain-text file (TextEdit: Format › Make Plain Text), save it, then follow the steps above.</p>
+      <textarea id="sortText" readonly aria-label="Sorting script"></textarea>
+      <button class="btn" id="sortCopy">Copy script</button>
+    </div>
+  </div>
+</div>
+<script type="text/plain" id="tplMac">
+#!/bin/bash
+# Last Shot Standing sorting file, made __DATE__
+# Moves __COUNT__ __WHAT__ frames from __ROOT__ into a folder named __DEST__,
+# along with any files that share their names (.JPG, .HIF, .XMP).
+# A file only moves when its name AND size match your cull. Nothing is deleted.
+DEST="__DEST__"
+dir="$1"
+if [ -z "$dir" ]; then
+  echo ""
+  echo "Last Shot Standing: drag the shoot folder (__ROOT__) into this window, then press Return."
+  read dir
+fi
+dir="${dir%"${dir##*[![:space:]]}"}"
+dir="${dir#\"}"; dir="${dir%\"}"; dir="${dir#\'}"; dir="${dir%\'}"
+dir="${dir%/}"
+if [ ! -d "$dir" ]; then echo "That isn't a folder: $dir"; echo "Nothing was moved."; exit 1; fi
+cd "$dir" || exit 1
+mkdir -p "$DEST"
+moved=0; frames=0; missing=0
+place() {
+  local src="$1" name t n=2
+  name=$(basename "$src"); t="$DEST/$name"
+  while [ -e "$t" ]; do t="$DEST/${name%.*}_$n.${name##*.}"; n=$((n+1)); done
+  mv "$src" "$t" && moved=$((moved+1))
+}
+while IFS='|' read -r size rel; do
+  [ -z "$rel" ] && continue
+  p=""
+  if [ -f "$rel" ] && [ "$(stat -f%z "$rel")" = "$size" ]; then
+    p="$rel"
+  else
+    pat=$(printf '%s' "$(basename "$rel")" | sed 's/[][*?\\]/\\&/g')
+    while IFS= read -r c; do
+      if [ "$(stat -f%z "$c")" = "$size" ]; then p="$c"; break; fi
+    done < <(find . -path "./$DEST" -prune -o -type f -name "$pat" -print 2>/dev/null)
+  fi
+  if [ -z "$p" ]; then missing=$((missing+1)); continue; fi
+  frames=$((frames+1))
+  d=$(dirname "$p"); f=$(basename "$p"); b="${f%.*}"
+  for c in "$d/$b".*; do [ -f "$c" ] && place "$c"; done
+done <<'CULLROOM_LIST'
+__LIST__
+CULLROOM_LIST
+rmdir "$DEST" 2>/dev/null
+echo ""
+echo "Done. Frames moved into $DEST: $frames (files: $moved, counting matching JPG/XMP files)."
+if [ "$missing" -gt 0 ]; then echo "Left alone because they weren't found or had changed: $missing"; fi
+echo ""
+</script>
+<script type="text/plain" id="tplWin">
+# Last Shot Standing sorting file, made __DATE__
+# Moves __COUNT__ __WHAT__ frames from __ROOT__ into a folder named __DEST__,
+# along with any files that share their names (.JPG, .HIF, .XMP).
+# A file only moves when its name AND size match your cull. Nothing is deleted.
+$destName = '__DEST__'
+$root = (Read-Host "Last Shot Standing: drag the shoot folder (__ROOT__) here, then press Enter").Trim()
+if ($root.StartsWith('& ')) { $root = $root.Substring(2).Trim() }
+$root = $root.Trim('"').Trim("'")
+if (-not (Test-Path -LiteralPath $root -PathType Container)) { Write-Host "That isn't a folder: $root"; Write-Host 'Nothing was moved.'; return }
+$dest = Join-Path $root $destName
+New-Item -ItemType Directory -Force -Path $dest | Out-Null
+$list = @'
+__LIST__
+'@ -split "`r?`n" | Where-Object { $_ }
+$moved = 0; $frames = 0; $missing = 0
+foreach ($line in $list) {
+  $cut = $line.IndexOf('|'); $size = [int64]$line.Substring(0, $cut); $rel = $line.Substring($cut + 1)
+  $hit = $null
+  $p = Join-Path $root ($rel -replace '/', '\')
+  if ((Test-Path -LiteralPath $p -PathType Leaf) -and ((Get-Item -LiteralPath $p).Length -eq $size)) { $hit = Get-Item -LiteralPath $p }
+  else {
+    $name = Split-Path $rel -Leaf
+    $hit = Get-ChildItem -LiteralPath $root -Recurse -File -ErrorAction SilentlyContinue |
+      Where-Object { $_.Name -eq $name -and $_.Length -eq $size -and -not $_.FullName.StartsWith($dest) } | Select-Object -First 1
+  }
+  if (-not $hit) { $missing++; continue }
+  $frames++
+  Get-ChildItem -LiteralPath $hit.DirectoryName -File | Where-Object { $_.BaseName -eq $hit.BaseName -or $_.Name.StartsWith($hit.Name + '.') } | ForEach-Object {
+    $t = Join-Path $dest $_.Name; $n = 2
+    while (Test-Path -LiteralPath $t) { $t = Join-Path $dest ($_.BaseName + '_' + $n + $_.Extension); $n++ }
+    Move-Item -LiteralPath $_.FullName -Destination $t; $moved++
+  }
+}
+if ((Get-ChildItem -LiteralPath $dest -Force | Measure-Object).Count -eq 0) { Remove-Item -LiteralPath $dest }
+Write-Host ''
+Write-Host "Done. Frames moved into ${destName}: $frames (files: $moved, counting matching JPG/XMP files)."
+if ($missing -gt 0) { Write-Host "Left alone because they weren't found or had changed: $missing" }
+</script>
+
+<div class="drop" id="drop" hidden><div>Drop a folder or photos<small>ARW · CR2 · CR3 · NEF · RAF · DNG · ORF · RW2 · JPG · HEIC</small></div></div>
+
+<script>
+(()=>{
+const $=s=>document.querySelector(s);
+const RAW=new Set(['arw','srf','sr2','cr2','cr3','crw','nef','nrw','raf','dng','orf','rw2','rwl','pef','3fr','fff','iiq','raw','x3f']);
+const IMG=new Set(['jpg','jpeg','heic','heif','png','webp']);
+let items=[], view=[], cur=0, mode='grid', filter='all', minStars=0, autoAdv=true, zoomed=false, panX=0, panY=0, sample=true;
+const undo=[];
+let nextId=1;
+
+/* ---------- persistence (per browser only) ---------- */
+const SKEY='cullroom:v1';
+let saved={};
+try{saved=JSON.parse(localStorage.getItem(SKEY)||'{}')||{}}catch(e){saved={}}
+let saveT=0;
+function persist(){clearTimeout(saveT);saveT=setTimeout(()=>{
+  for(const it of items){ if(it.sample) continue; if(it.f||it.s||it.userRot) saved[it.key]={f:it.f,s:it.s,r:it.userRot||0}; else delete saved[it.key]; }
+  try{localStorage.setItem(SKEY,JSON.stringify(saved))}catch(e){}
+  saveSession();
+},300)}
+
+/* ---------- JPEG / TIFF parsing ---------- */
+function walkJpeg(u,s,full){ // returns {start,end,w,h,sof,exif}
+  const n=u.length; let i=s+2, w=0,h=0,sof=-1,exif=null;
+  while(i<n-4){
+    if(u[i]!==0xFF) return null;
+    let m=u[i+1];
+    while(m===0xFF&&i<n-3){i++;m=u[i+1];}
+    if(m===0xD9) return {start:s,end:i+2,w,h,sof,exif};
+    if((m>=0xD0&&m<=0xD7)||m===0x01){i+=2;continue;}
+    const len=(u[i+2]<<8)|u[i+3];
+    if(len<2) return null;
+    if(m>=0xC0&&m<=0xCF&&m!==0xC4&&m!==0xC8&&m!==0xCC){ sof=m; h=(u[i+5]<<8)|u[i+6]; w=(u[i+7]<<8)|u[i+8]; }
+    if(m===0xE1&&exif===null&&u[i+4]===0x45&&u[i+5]===0x78&&u[i+6]===0x69&&u[i+7]===0x66) exif=i+10;
+    if(m===0xDA){
+      if(!full) return {start:s,end:-1,w,h,sof,exif};
+      let j=i+2+len;
+      for(;;){
+        j=u.indexOf(0xFF,j); if(j<0||j>=n-1) return null;
+        const b=u[j+1];
+        if(b===0x00||(b>=0xD0&&b<=0xD7)){j+=2;continue}
+        if(b===0xFF){j++;continue}
+        break;
+      }
+      i=j; continue;
+    }
+    i+=2+len;
+  }
+  return null;
+}
+function findPreview(u){
+  let best=null, i=0;
+  for(;;){
+    i=u.indexOf(0xFF,i); if(i<0||i>u.length-3) break;
+    if(u[i+1]===0xD8&&u[i+2]===0xFF){
+      const r=walkJpeg(u,i,true);
+      if(r&&r.end>0){
+        if(r.sof>=0xC0&&r.sof<=0xC2&&r.w>0&&(!best||r.w*r.h>best.w*best.h)) best=r;
+        i=r.end; continue;
+      }
+    }
+    i++;
+  }
+  return best;
+}
+function readTiff(dv,base,out){
+  out=out||{};
+  if(base<0||base+8>dv.byteLength) return out;
+  const b0=dv.getUint16(base); if(b0!==0x4949&&b0!==0x4D4D) return out;
+  const le=b0===0x4949, L=dv.byteLength;
+  const g16=o=>dv.getUint16(base+o,le), g32=o=>dv.getUint32(base+o,le);
+  const SZ={1:1,2:1,3:2,4:4,5:8,7:1,8:2,9:4,10:8};
+  const ifd=(off,depth)=>{
+    if(!off||base+off+2>L||depth>2) return;
+    const n=g16(off); if(n>600) return;
+    for(let k=0;k<n;k++){
+      const e=off+2+k*12; if(base+e+12>L) break;
+      const tag=g16(e), type=g16(e+2), cnt=g32(e+4);
+      const sz=(SZ[type]||1)*cnt; const vo=sz<=4?e+8:g32(e+8);
+      if(base+vo+Math.min(sz,8)>L) continue;
+      let v;
+      if(type===2){let s='';for(let q=0;q<Math.min(cnt,128);q++){const c=dv.getUint8(base+vo+q);if(!c)break;s+=String.fromCharCode(c)}v=s.trim()}
+      else if(type===3) v=g16(vo);
+      else if(type===4||type===9) v=g32(vo);
+      else if(type===5||type===10){const a=type===5?g32(vo):dv.getInt32(base+vo,le),d=type===5?g32(vo+4):dv.getInt32(base+vo+4,le);v=d?a/d:0;if(tag===0x829A)out.expPair=[a,d]}
+      else continue;
+      if(!(tag in out)) out[tag]=v;
+      if(tag===0x8769) ifd(v,depth+1);
+    }
+  };
+  ifd(g32(4),0);
+  return out;
+}
+function findAscii(u,str,limit){
+  const c0=str.charCodeAt(0); let i=0; limit=Math.min(limit,u.length-str.length);
+  while(i<limit){ i=u.indexOf(c0,i); if(i<0||i>=limit) return -1;
+    let ok=true; for(let k=1;k<str.length;k++) if(u[i+k]!==str.charCodeAt(k)){ok=false;break}
+    if(ok) return i; i++; }
+  return -1;
+}
+const ORI={1:0,3:180,6:90,8:270};
+
+/* ---------- import ---------- */
+function extOf(n){const i=n.lastIndexOf('.');return i<0?'':n.slice(i+1).toLowerCase()}
+async function addFiles(files){
+  files=files.filter(f=>{const e=extOf(f.name);return (RAW.has(e)||IMG.has(e))&&!f.name.startsWith('._')});
+  if(!files.length){toast('No RAW or JPG files found there');return}
+  if(sample){ items=[]; sample=false; $('#banner').hidden=true; }
+  RD=null; rEl.hidden=false; loadingCard(0,1);
+  // when RAW+JPG pairs exist, keep the RAW only
+  const rawBase=new Set(files.filter(f=>RAW.has(extOf(f.name))).map(f=>f.name.replace(/\.[^.]+$/,'').toLowerCase()));
+  const seen=new Set(items.map(i=>i.key));
+  const fresh=[];
+  for(const f of files){
+    const e=extOf(f.name);
+    if(IMG.has(e)&&rawBase.has(f.name.replace(/\.[^.]+$/,'').toLowerCase())) continue;
+    const key=f.name+':'+f.size; if(seen.has(key)) continue; seen.add(key);
+    const sv=saved[key]||{};
+    fresh.push({id:nextId++,key,file:f,abs:(window.lss?window.lss.pathFor(f):''),path:(f.webkitRelativePath||f._rel||f.name),name:f.name,raw:RAW.has(e),f:sv.f||0,s:sv.s||0,userRot:sv.r||0,rot:0,baseRot:0,pw:0,ph:0,thumb:null,url:null,meta:{},time:Infinity,err:null});
+  }
+  fresh.sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true}));
+  items.push(...fresh);
+  numberFrames(); rebuild(true);
+  let done=0; const total=fresh.length; progress(0,total);
+  const q=fresh.slice();
+  const worker=async()=>{ while(q.length){ const it=q.shift(); await processItem(it); done++; progress(done,total); refreshItem(it); } };
+  await Promise.all([worker(),worker(),worker()]);
+  // order by capture time (keeps multi-camera shoots in sequence)
+  const keep=view[cur];
+  items.sort((a,b)=>(a.time-b.time)||a.name.localeCompare(b.name,undefined,{numeric:true}));
+  numberFrames(); computeBursts(); rebuild(false, keep);
+  const bad=fresh.filter(i=>i.err).length;
+  msg(bad?`Indexed ${total-bad} frames. ${bad} had no readable preview.`:`Indexed ${total} frames.`);
+  const ses=findSession(); if(ses){resumeFrom(ses);return}
+  startRounds(bad?`${bad} file${bad>1?'s':''} had no readable preview and ${bad>1?'were':'was'} left out.`:'');
+}
+function numberFrames(){items.forEach((it,i)=>it.no=i+1)}
+/* bursts: frames from the same camera shot within a second of each other */
+function computeBursts(){
+  let id=0, prev=null, group=[];
+  const flush=()=>{ if(group.length>1){id++; group.forEach((it,k)=>it.burst={id,k:k+1,n:group.length})} else group.forEach(it=>it.burst=null); group=[] };
+  for(const it of items){
+    const ok=prev&&isFinite(it.time)&&isFinite(prev.time)&&it.time>=prev.time&&it.time-prev.time<=1000&&((it.meta||{})[0x110]||'')===((prev.meta||{})[0x110]||'');
+    if(!ok) flush(); group.push(it); prev=it;
+  }
+  flush();
+}
+async function processItem(it){
+  try{
+    let tags={}, hasOwnOri=false;
+    if(it.raw){
+      const u=new Uint8Array(await it.file.arrayBuffer());
+      const p=findPreview(u);
+      if(!p) throw new Error('no preview');
+      const dv=new DataView(u.buffer);
+      if((u[0]===0x49&&u[1]===0x49)||(u[0]===0x4D&&u[1]===0x4D)) readTiff(dv,0,tags);
+      else{
+        const c1=findAscii(u,'CMT1',300000); if(c1>=0) readTiff(dv,c1+4,tags);
+        const c2=findAscii(u,'CMT2',300000); if(c2>=0) readTiff(dv,c2+4,tags);
+      }
+      if(p.exif!==null){ const pt=readTiff(dv,p.exif,{}); if(pt[0x112]&&pt[0x112]!==1) hasOwnOri=true; for(const k in pt) if(!(k in tags)) tags[k]=pt[k]; }
+      it.baseRot=hasOwnOri?0:(ORI[tags[0x112]]||0);
+      it.blob=it.file.slice(p.start,p.end,'image/jpeg');
+      it.url=URL.createObjectURL(it.blob);
+    }else{
+      const u=new Uint8Array(await it.file.slice(0,262144).arrayBuffer());
+      if(u[0]===0xFF&&u[1]===0xD8){ const r=walkJpeg(u,0,false); if(r&&r.exif!==null) readTiff(new DataView(u.buffer),r.exif,tags); }
+      it.baseRot=0;
+      it.blob=it.file;
+      it.url=URL.createObjectURL(it.file);
+    }
+    it.meta=tags;
+    const dt=tags[0x9003]||tags[0x132];
+    if(typeof dt==='string'){const m=dt.match(/(\d{4}):(\d\d):(\d\d) (\d\d):(\d\d):(\d\d)/);if(m){const ss=String(tags[0x9291]||'').replace(/\D/g,'');it.time=new Date(+m[1],m[2]-1,+m[3],+m[4],+m[5],+m[6]).getTime()+(ss?Math.round(parseFloat('0.'+ss)*1000):0);}}
+    it.rot=(it.baseRot+it.userRot)%360;
+    await makeThumb(it);
+  }catch(e){ it.err='No preview'; }
+}
+async function makeThumb(it){
+  let bmp; try{bmp=await createImageBitmap(it.blob)}catch(e){it.err='Can’t decode';return}
+  it.pw=bmp.width; it.ph=bmp.height;
+  const L=520, sc=Math.min(1,L/Math.max(it.pw,it.ph));
+  const w=Math.round(it.pw*sc), h=Math.round(it.ph*sc);
+  const c=document.createElement('canvas'); c.width=w; c.height=h;
+  c.getContext('2d').drawImage(bmp,0,0,w,h); bmp.close();
+  const tb=await new Promise(r=>c.toBlob(r,'image/jpeg',.84));
+  if(it.thumb) URL.revokeObjectURL(it.thumb);
+  it.thumb=URL.createObjectURL(tb);
+}
+
+/* ---------- view + rendering ---------- */
+function passes(it){
+  if(filter==='pick'&&it.f!==1) return false;
+  if(filter==='unflag'&&it.f!==0) return false;
+  if(filter==='rej'&&it.f!==-1) return false;
+  if(it.s<minStars) return false;
+  return true;
+}
+function rebuild(keepIndex, keepItem){
+  const prev=keepItem||view[cur];
+  view=items.filter(passes);
+  if(prev){const k=view.indexOf(prev); if(k>=0) cur=k; else if(!keepIndex) cur=0;}
+  cur=Math.max(0,Math.min(cur,view.length-1));
+  renderGrid(); renderStrip(); tally(); showCurrent();
+}
+const stars=s=>s?'★'.repeat(s):'';
+function rotStyle(it){return it.rot?`transform:rotate(${it.rot}deg)`+(it.rot%180?';width:66.6%;height:150%':''):''}
+function cellHTML(it,i){
+  const tag=it.f===1?'<span class="tag pick">KEEP</span>':it.f===-1?'<span class="tag rej">REJECT</span>':'';
+  const img=it.thumb?`<img src="${it.thumb}" alt="" loading="lazy" style="${rotStyle(it)}">`:`<span class="wait">${it.err||'reading…'}</span>`;
+  return `<div class="cell${i===cur?' sel':''}" data-i="${i}" data-f="${it.f}" tabindex="-1"><div class="ph">${img}${tag}</div><div class="cmeta"><span class="fno">${String(it.no).padStart(4,'0')}</span><span class="fname">${esc(it.name)}</span><span class="stars">${stars(it.s)}</span></div></div>`;
+}
+function esc(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function renderGrid(){
+  const g=$('#grid');
+  if(!view.length){g.innerHTML=`<div class="empty" style="grid-column:1/-1"><div><b>${items.length?'Nothing matches this filter':'No frames yet'}</b><p>${items.length?'Switch to All or lower the rating filter to see more frames.':'Choose Import folder, or drop a card’s DCIM folder anywhere on this page.'}</p></div></div>`;return}
+  g.innerHTML=view.map(cellHTML).join('');
+}
+function renderStrip(){
+  if(mode!=='loupe') return;
+  $('#strip').innerHTML=view.map((it,i)=>`<button data-i="${i}" data-f="${it.f}" class="${i===cur?'sel':''}" aria-label="${esc(it.name)}">${it.thumb?`<img src="${it.thumb}" alt="" loading="lazy" style="${it.rot?`transform:rotate(${it.rot}deg)`:''}">`:''}</button>`).join('');
+  scrollStrip();
+}
+function scrollStrip(){const b=$('#strip').children[cur]; if(b) b.scrollIntoView({block:'nearest',inline:'center'})}
+function refreshItem(it){
+  const i=view.indexOf(it);
+  if(i>=0){
+    const old=$('#grid').children[i];
+    if(old&&old.classList.contains('cell')){const t=document.createElement('div');t.innerHTML=cellHTML(it,i);old.replaceWith(t.firstChild)}
+    const sb=$('#strip').children[i];
+    if(sb){sb.dataset.f=it.f; if(it.thumb&&!sb.firstChild) sb.innerHTML=`<img src="${it.thumb}" alt="">`; const im=sb.querySelector('img'); if(im) im.style.transform=it.rot?`rotate(${it.rot}deg)`:''}
+    if(i===cur) showCurrent();
+  }
+  tally();
+}
+function tally(){
+  let p=0,r=0,u=0,s=0; for(const it of items){if(it.f===1)p++;else if(it.f===-1)r++;else u++; if(it.s)s++}
+  $('#count').textContent=`${items.length.toLocaleString()} frames`;
+  $('#nAll').textContent=items.length; $('#nPick').textContent=p; $('#nUn').textContent=u; $('#nRej').textContent=r;
+  $('#tPick').textContent=p; $('#tRej').textContent=r; $('#tUn').textContent=u; $('#tStar').textContent=s;
+}
+function fmtExp(m){
+  if(m.expPair){const [a,d]=m.expPair; if(a&&d){const v=a/d; return v>=1?`${+v.toFixed(1)}s`:`1/${Math.round(d/a)}`}}
+  const v=m[0x829A]; if(!v) return null; return v>=1?`${+v.toFixed(1)}s`:`1/${Math.round(1/v)}`;
+}
+function showCurrent(){
+  const it=view[cur];
+  document.querySelectorAll('.cell.sel').forEach(c=>c.classList.remove('sel'));
+  const cell=$('#grid').children[cur]; if(cell&&cell.classList.contains('cell')){cell.classList.add('sel'); if(mode==='grid') cell.scrollIntoView({block:'nearest'})}
+  document.querySelectorAll('#strip .sel').forEach(c=>c.classList.remove('sel'));
+  const sb=$('#strip').children[cur]; if(sb){sb.classList.add('sel'); scrollStrip()}
+  // info
+  if(!it){$('#iName').textContent='—';$('#iExpo').textContent='—';$('#iMeta').innerHTML='';updateBar(null);return}
+  $('#iName').textContent=it.name;
+  const m=it.meta||{};
+  const parts=[fmtExp(m), m[0x829D]?`f/${(+m[0x829D]).toFixed(1).replace(/\.0$/,'')}`:null, m[0x8827]?`ISO ${m[0x8827]}`:null, m[0x920A]?`${Math.round(m[0x920A])}mm`:null].filter(Boolean);
+  $('#iExpo').textContent=parts.length?parts.join(' · '):'No exposure data';
+  const rows=[];
+  rows.push(['Frame',`${it.no} of ${items.length}`]);
+  if(m[0x9003]) rows.push(['Captured',String(m[0x9003]).replace(/^(\d{4}):(\d\d):(\d\d)/,'$1-$2-$3')]);
+  if(m[0x110]) rows.push(['Camera',[m[0x10F]&&!String(m[0x110]).startsWith(String(m[0x10F]).split(' ')[0])?m[0x10F]:'',m[0x110]].join(' ').trim()]);
+  if(m[0xA434]) rows.push(['Lens',m[0xA434]]);
+  if(it.burst) rows.push(['Burst',`${it.burst.k} of ${it.burst.n}`]);
+  if(it.pw) rows.push(['Preview',`${it.pw}×${it.ph}`]);
+  rows.push(['File',it.file?`${(it.file.size/1048576).toFixed(1)} MB`:'sample']);
+  $('#iMeta').innerHTML=rows.map(([a,b])=>`<dt>${a}</dt><dd>${esc(String(b))}</dd>`).join('');
+  updateBar(it);
+  if(mode==='loupe') loadLoupe(it);
+}
+function updateBar(it){
+  $('#bPick').classList.toggle('on-pick',!!it&&it.f===1);
+  $('#bRej').classList.toggle('on-rej',!!it&&it.f===-1);
+  document.querySelectorAll('#starbtns button').forEach(b=>b.classList.toggle('on',!!it&&+b.dataset.s<=it.s));
+}
+
+/* ---------- loupe ---------- */
+const lim=$('#lim'), stage=$('#stage');
+let loadTok=0;
+const pool=new Map();
+function prefetch(it){
+  if(!it||!it.url||pool.has(it.id)) return;
+  const im=new Image(); im.src=it.url; im.decode().catch(()=>{});
+  pool.set(it.id,im); if(pool.size>12){pool.delete(pool.keys().next().value)}
+}
+let loadedId=0;
+async function loadLoupe(it){
+  if(loadedId===it.id&&!lim.hidden){layout();return}
+  const tok=++loadTok;
+  updateHud(it);
+  if(!it.url){lim.hidden=true;loadedId=0;return}
+  prefetch(it);
+  const im=pool.get(it.id);
+  try{await im.decode()}catch(e){}
+  if(tok!==loadTok) return;
+  lim.src=it.url; lim.hidden=false; loadedId=it.id; layout();
+  for(const d of [1,2,3,-1]) prefetch(view[cur+d]);
+}
+function dims(it){const sw=it.rot%180!==0;return [sw?it.ph:it.pw, sw?it.pw:it.ph]}
+function scaleFor(it){
+  const r=stage.getBoundingClientRect(); const [ew,eh]=dims(it);
+  const fit=Math.min(r.width/ew,r.height/eh);
+  return {r,fit,s:zoomed?Math.max(1,fit*2):fit,ew,eh};
+}
+function clampPan(it){
+  const {r,s,ew,eh}=scaleFor(it);
+  const mx=Math.max(0,(ew*s-r.width)/2), my=Math.max(0,(eh*s-r.height)/2);
+  panX=Math.max(-mx,Math.min(mx,panX)); panY=Math.max(-my,Math.min(my,panY));
+}
+function layout(){
+  const it=view[cur]; if(!it||!it.pw||mode!=='loupe') return;
+  clampPan(it);
+  const {r,s}=scaleFor(it);
+  const w=it.pw*s, h=it.ph*s;
+  lim.style.width=w+'px'; lim.style.height=h+'px';
+  lim.style.left=(r.width/2-w/2+panX)+'px'; lim.style.top=(r.height/2-h/2+panY)+'px';
+  lim.style.transform=it.rot?`rotate(${it.rot}deg)`:'';
+  stage.classList.toggle('zoomed',zoomed);
+  updateHud(it);
+}
+function updateHud(it){
+  if(!it){$('#hud').hidden=true;return}
+  $('#hud').hidden=false;
+  const flag=it.f===1?'<span class="tag pick" style="position:static">KEEP</span>':it.f===-1?'<span class="tag rej" style="position:static">REJECT</span>':'';
+  let z=''; if(it.pw){const {s}=scaleFor(it); z=`${Math.round(s*100)}%`}
+  $('#hud').innerHTML=`<span class="fno">${String(it.no).padStart(4,'0')}</span><span>${esc(it.name)}</span>${it.s?`<span class="stars">${stars(it.s)}</span>`:''}${flag}<span class="z">${z}</span>`;
+}
+function toggleZoom(px,py){
+  const it=view[cur]; if(!it||!it.pw) return;
+  const r=stage.getBoundingClientRect();
+  if(px==null){px=r.width/2;py=r.height/2}
+  const before=scaleFor(it).s;
+  const dx=px-r.width/2-panX, dy=py-r.height/2-panY;
+  zoomed=!zoomed;
+  const after=scaleFor(it).s;
+  if(zoomed){panX=px-r.width/2-dx*after/before; panY=py-r.height/2-dy*after/before}else{panX=panY=0}
+  layout();
+}
+let drag=null;
+stage.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,px:panX,py:panY,moved:false};stage.setPointerCapture(e.pointerId)});
+stage.addEventListener('pointermove',e=>{if(!drag)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(Math.abs(dx)+Math.abs(dy)>4)drag.moved=true;if(zoomed&&drag.moved){stage.classList.add('drag');panX=drag.px+dx;panY=drag.py+dy;layout()}});
+stage.addEventListener('pointerup',e=>{stage.classList.remove('drag');if(drag&&!drag.moved){const r=stage.getBoundingClientRect();toggleZoom(e.clientX-r.left,e.clientY-r.top)}drag=null});
+new ResizeObserver(()=>layout()).observe(stage);
+
+/* ---------- actions ---------- */
+function setMode(m){
+  mode=m; $('#gridwrap').hidden=m!=='grid'; $('#loupe').hidden=m!=='loupe';
+  document.querySelectorAll('#views button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===m));
+  if(m==='loupe'){renderStrip()}
+  showCurrent();
+}
+function move(d){if(!view.length)return;const n=Math.max(0,Math.min(view.length-1,cur+d));if(n!==cur){cur=n;showCurrent()}}
+function apply(change){
+  const it=view[cur]; if(!it) return;
+  undo.push({it,f:it.f,s:it.s,userRot:it.userRot}); if(undo.length>200) undo.shift();
+  const flagOrRate=('f' in change)||('s' in change);
+  if('f' in change&&change.f!==it.f) rDirty=true;
+  Object.assign(it,change);
+  it.rot=(it.baseRot+it.userRot)%360;
+  persist();
+  if(!passes(it)){ // item leaves the current view; the next frame slides into place
+    const idx=cur; view=items.filter(passes); cur=Math.min(idx,view.length-1); renderGrid(); renderStrip(); tally(); showCurrent(); return;
+  }
+  refreshItem(it);
+  if(mode==='loupe') layout();
+  if(flagOrRate&&autoAdv) move(1);
+}
+function rotate(dir){const it=view[cur];if(!it)return;apply({userRot:((it.userRot+(dir>0?90:270))%360)})}
+function doUndo(){
+  const u=undo.pop(); if(!u) return;
+  rDirty=true;
+  Object.assign(u.it,{f:u.f,s:u.s,userRot:u.userRot}); u.it.rot=(u.it.baseRot+u.it.userRot)%360; persist();
+  rebuild(false,u.it); const k=view.indexOf(u.it); if(k>=0){cur=k;showCurrent()} msg('Undid last change');
+}
+function setFilter(f){filter=f;document.querySelectorAll('#filters button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.f===f));rebuild(true)}
+function gridCols(){const t=getComputedStyle($('#grid')).gridTemplateColumns;return Math.max(1,t.split(' ').filter(Boolean).length)}
+
+document.addEventListener('keydown',e=>{
+  if(e.target.matches('input,textarea,select')&&e.key!=='Escape'&&sortSheet.hidden) return;
+  const k=e.key, mod=e.metaKey||e.ctrlKey;
+  if(!sortSheet.hidden){if(e.key==='Escape'){e.preventDefault();closeSort()}return}
+  if(!rEl.hidden){roundsKey(e);return}
+  if(mod&&k.toLowerCase()==='z'){e.preventDefault();doUndo();return}
+  if(mod||e.altKey) return;
+  if(e.shiftKey&&/^Digit[0-5]$/.test(e.code)){e.preventDefault();apply({s:+e.code.slice(5)});return}
+  let h=true;
+  switch(k){
+    case 'ArrowRight': move(1); break;
+    case 'ArrowLeft': move(-1); break;
+    case 'ArrowDown': move(mode==='grid'?gridCols():1); break;
+    case 'ArrowUp': move(mode==='grid'?-gridCols():-1); break;
+    case 'Home': cur=0; showCurrent(); break;
+    case 'End': cur=view.length-1; showCurrent(); break;
+    case 'p': case 'P': apply({f:1}); break;
+    case 'x': case 'X': apply({f:-1}); break;
+    case 'u': case 'U': apply({f:0}); break;
+    case '2': apply({f:1}); break;
+    case '1': apply({f:-1}); break;
+    case 'f': case 'F': openRounds(); break;
+    case 'Enter': case 'e': case 'E': setMode('loupe'); break;
+    case 'g': case 'G': setMode('grid'); break;
+    case 'Escape': if(zoomed){toggleZoom()} else if(mode==='loupe') setMode('grid'); else h=false; break;
+    case 'z': case 'Z': if(mode==='loupe') toggleZoom(); else setMode('loupe'); break;
+    case ' ': if(mode==='loupe') toggleZoom(); else setMode('loupe'); break;
+    case 'r': rotate(1); break;
+    case 'R': rotate(-1); break;
+    case 'a': case 'A': setAuto(!autoAdv); break;
+    case 'i': case 'I': toggleInfo(); break;
+    default: h=false;
+  }
+  if(h) e.preventDefault();
+});
+$('#grid').addEventListener('click',e=>{const c=e.target.closest('.cell');if(!c)return;cur=+c.dataset.i;showCurrent()});
+$('#grid').addEventListener('dblclick',e=>{const c=e.target.closest('.cell');if(!c)return;cur=+c.dataset.i;setMode('loupe')});
+$('#strip').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;cur=+b.dataset.i;showCurrent()});
+$('#filters').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setFilter(b.dataset.f)});
+$('#views').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setMode(b.dataset.v)});
+$('#minStars').addEventListener('change',e=>{minStars=+e.target.value;e.target.blur();rebuild(true)});
+$('#size').addEventListener('input',e=>document.documentElement.style.setProperty('--cell',e.target.value+'px'));
+$('#bPick').onclick=()=>apply({f:1}); $('#bRej').onclick=()=>apply({f:-1}); $('#bUn').onclick=()=>apply({f:0});
+$('#starbtns').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const it=view[cur];if(!it)return;const s=+b.dataset.s;apply({s:it.s===s?0:s})});
+function setAuto(v){autoAdv=v;const b=$('#bAuto');b.setAttribute('aria-pressed',v);b.textContent=`Auto-advance: ${v?'on':'off'}`;msg(`Auto-advance ${v?'on':'off'}`)}
+$('#bAuto').onclick=()=>setAuto(!autoAdv);
+const info=$('#info');
+function toggleInfo(){ if(matchMedia('(max-width:900px)').matches) info.classList.toggle('open'); else info.classList.toggle('closed'); setTimeout(layout,0) }
+$('#infoBtn').onclick=toggleInfo;
+$('#pickDir').onchange=e=>{addFiles([...e.target.files]);e.target.value=''};
+$('#pickFiles').onchange=e=>{addFiles([...e.target.files]);e.target.value=''};
+
+$('#bCopy').onclick=()=>{
+  if(!view.length){toast('Nothing to copy in this view');return}
+  const text=view.map(i=>i.name).join('\n');
+  const label=`${view.length} file name${view.length>1?'s':''}`;
+  const fallback=()=>{
+    let box=document.querySelector('.copybox'); if(box) box.remove();
+    box=document.createElement('div'); box.className='copybox';
+    box.innerHTML=`<span class="label">Copy these ${label}</span><textarea id="copyText" readonly></textarea><button class="btn" id="copyClose">Done</button>`;
+    document.body.appendChild(box); const ta=box.querySelector('textarea'); ta.value=text; ta.focus(); ta.select();
+    box.querySelector('#copyClose').onclick=()=>box.remove();
+  };
+  try{ navigator.clipboard.writeText(text).then(()=>toast(`Copied ${label}`),fallback) }catch(e){ fallback() }
+};
+
+/* drag and drop, folders included */
+let dragDepth=0;
+addEventListener('dragenter',e=>{if([...e.dataTransfer.types].includes('Files')){dragDepth++;$('#drop').hidden=false}});
+addEventListener('dragleave',()=>{if(--dragDepth<=0){dragDepth=0;$('#drop').hidden=true}});
+addEventListener('dragover',e=>e.preventDefault());
+addEventListener('drop',async e=>{
+  e.preventDefault(); dragDepth=0; $('#drop').hidden=true;
+  const entries=[...e.dataTransfer.items].map(i=>i.webkitGetAsEntry&&i.webkitGetAsEntry()).filter(Boolean);
+  if(!entries.length){addFiles([...e.dataTransfer.files]);return}
+  msg('Reading folder…');
+  const out=[];
+  const walk=async en=>{
+    if(en.isFile){try{const fl=await new Promise((res,rej)=>en.file(res,rej));try{fl._rel=en.fullPath.replace(/^\//,'')}catch(_){}out.push(fl)}catch(_){}}
+    else if(en.isDirectory){const rd=en.createReader();let batch;do{batch=await new Promise((res,rej)=>rd.readEntries(res,rej));for(const c of batch) await walk(c)}while(batch.length)}
+  };
+  for(const en of entries) await walk(en);
+  addFiles(out);
+});
+
+/* ---------- rounds mode ---------- */
+const rEl=$('#rounds'), rstage=$('#rstage'), rCard=$('#rCard');
+const paneL=$('#rpaneL'), paneR=$('#rpaneR'), rimg=$('#rimg'), rimg2=$('#rimg2');
+let RD=null, rTok=0, rZoom=false, rF={x:.5,y:.5}, rDirty=false, rTwo=false, rGeom=[];
+try{rTwo=localStorage.getItem('cullroom:two')==='1'}catch(e){}
+function goFull(){try{if(!document.fullscreenElement){const p=document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen();if(p&&p.catch)p.catch(()=>{})}}catch(e){}}
+const pad=n=>String(n).padStart(4,'0');
+
+/* saved sessions: kept in this browser, matched by file names + sizes */
+const SESS='cullroom:sessions';
+function shootSig(list){let h=2166136261;for(const k of list.map(i=>i.key).sort()){for(let j=0;j<k.length;j++){h^=k.charCodeAt(j);h=Math.imul(h,16777619)}h^=10;h=Math.imul(h,16777619)}return (h>>>0).toString(36)+'-'+list.length}
+function readSessions(){try{return JSON.parse(localStorage.getItem(SESS)||'{}')||{}}catch(e){return{}}}
+function writeSessions(all){try{localStorage.setItem(SESS,JSON.stringify(all))}catch(e){}}
+function saveSession(){
+  if(!RD||sample||!RD.sig||RD.card==='resume') return;
+  const all=readSessions();
+  all[RD.sig]={sig:RD.sig,round:RD.round,i:RD.i,card:RD.card,last:RD.last||null,queue:RD.queue.map(it=>it.key),dec:[...RD.dec].map(([it,v])=>[it.key,v]),total:items.length,savedAt:Date.now()};
+  const keys=Object.keys(all).sort((a,b)=>all[b].savedAt-all[a].savedAt); for(const k of keys.slice(8)) delete all[k];
+  writeSessions(all);
+}
+function dropSession(sig){const all=readSessions();delete all[sig];writeSessions(all)}
+function findSession(){
+  if(sample) return null;
+  const all=readSessions(), sig=shootSig(items);
+  if(all[sig]) return all[sig];
+  const have=new Set(items.map(i=>i.key));
+  return Object.values(all).filter(s=>s.queue&&s.queue.length&&s.queue.every(k=>have.has(k))).sort((a,b)=>b.savedAt-a.savedAt)[0]||null;
+}
+function resumeFrom(s){
+  const byKey=new Map(items.map(i=>[i.key,i]));
+  const queue=s.queue.map(k=>byKey.get(k)).filter(it=>it&&it.url&&!it.err);
+  const dec=new Map(); for(const [k,v] of s.dec){const it=byKey.get(k); if(it) dec.set(it,v)}
+  RD={round:s.round,queue,i:Math.min(s.i,Math.max(0,queue.length-1)),hist:[],dec,prev:null,card:null,note:'',last:s.last,sig:shootSig(items),side:'L',savedAt:s.savedAt,was:s.card};
+  if(s.sig!==RD.sig) dropSession(s.sig);
+  rDirty=false; rEl.hidden=false; clearImgs();
+  roundCard('resume');
+}
+function fmtWhen(t){try{return new Date(t).toLocaleString([], {weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}catch(e){return ''}}
+
+function clearImgs(){rimg.removeAttribute('src');rimg2.removeAttribute('src');rimg.hidden=true;rimg2.hidden=true}
+function startRounds(note){
+  const set=items.filter(it=>it.f!==-1&&it.url&&!it.err);
+  RD={round:1,queue:set,i:0,hist:[],dec:new Map(),prev:null,card:null,note:note||'',sig:sample?null:shootSig(items),side:'L'};
+  rDirty=false; rEl.hidden=false; clearImgs();
+  roundCard(set.length?'intro':'empty');
+}
+function openRounds(){
+  rEl.hidden=false;
+  if(!RD){startRounds();return}
+  if(rDirty&&RD.card!=='empty'&&RD.card!=='resume'){roundCard('changed');return}
+  if(RD.card) roundCard(RD.card); else {rCard.hidden=true;showR()}
+}
+function showGrid(){
+  rEl.hidden=true;
+  try{if(document.fullscreenElement)document.exitFullscreen().catch(()=>{})}catch(e){}
+  rebuild(false);
+}
+const exitRounds=showGrid;
+function loadingCard(d,t){
+  const still=(!rCard.hidden&&rCard.querySelector('.rbox.load'))?' still':'';
+  rCard.hidden=false;
+  rCard.innerHTML=`<div class="rbox load${still}"><span class="label">Importing</span><h2>Reading previews</h2><p>${d} of ${t} frames. Round 1 starts as soon as they’re all in.</p><div class="rprog" style="flex:none"><i style="width:${t?100*d/t:0}%"></i></div></div>`;
+  $('#rRound').textContent='Importing'; $('#rPos').textContent=`${d} / ${t}`; $('#rName').textContent=''; $('#rTally').textContent=''; $('#rBurst').innerHTML='';
+}
+function roundStats(){let k=0,r=0;for(const it of RD.queue){const d=RD.dec.get(it);if(d===1)k++;else if(d===-1)r++}return{k,r,u:RD.queue.length-k-r}}
+function roundCard(kind){
+  RD.card=kind; rCard.hidden=false;
+  const n=RD.queue.length; let eyebrow='Rounds',h='',p='',b='';
+  const imp=`<label class="btn big" for="pickDir">Import folder</label>`;
+  if(kind==='intro'){
+    eyebrow=sample?'Sample shoot':'Rounds';
+    h=`Round ${RD.round}`;
+    p=`${n} frame${n===1?'':'s'}. Press <kbd>2</kbd> to keep and <kbd>1</kbd> to reject. Keepers come back in the next round, until a round goes by with no rejects. Press <kbd>C</kbd> any time to compare two frames side by side.`;
+    if(sample) p+=` These are generated example frames; import a folder of RAWs, or drop one on this page, to cull your own.`;
+    if(RD.note) p+=` ${RD.note}`;
+    b=`<button class="btn primary big" data-a="go">Start <kbd>Enter</kbd></button>${sample?imp:''}<button class="btn big" data-a="exit">Grid <kbd>G</kbd></button>`;
+  }else if(kind==='resume'){
+    eyebrow='Saved cull';
+    h='Pick up where you left off';
+    const w=RD.was==='done'?`You finished this cull with ${n} keeper${n===1?'':'s'}`:RD.was==='between'?`You had just finished round ${RD.round-1}`:`You were on round ${RD.round}, frame ${RD.i+1} of ${n}`;
+    p=`${w}. Saved ${fmtWhen(RD.savedAt)}. Start over clears your keeps and rejects for this shoot.`;
+    b=`<button class="btn primary big" data-a="resume">Resume <kbd>Enter</kbd></button><button class="btn big" data-a="over">Start over</button>`;
+  }else if(kind==='empty'){
+    h=items.length?'Nothing to cull':'No shoot loaded';
+    p=items.length?'Every frame is rejected. Look through the rejects in the grid, or import a new shoot.':'Import a folder of RAWs, or drop one on this page.';
+    b=`${imp}<button class="btn big" data-a="exit">Grid <kbd>G</kbd></button>`;
+  }else if(kind==='changed'){
+    h='Flags changed in the grid';
+    p=`You can keep going with round ${RD.round}, or restart from round 1 using every frame that isn’t rejected now.`;
+    b=`<button class="btn primary big" data-a="cont">Continue round ${RD.round} <kbd>Enter</kbd></button><button class="btn big" data-a="restart">Restart rounds</button>`;
+  }else if(kind==='between'){
+    const s=RD.last||{k:n,r:0,u:0};
+    h=`Round ${RD.round-1} done`;
+    p=`Kept ${s.k}, rejected ${s.r}${s.u?`, skipped ${s.u}`:''}. Round ${RD.round} has ${n} frame${n===1?'':'s'}.`;
+    b=`<button class="btn primary big" data-a="go">Start round ${RD.round} <kbd>Enter</kbd></button><button class="btn big" data-a="undo">Undo last <kbd>⌫</kbd></button><button class="btn big" data-a="exit">Stop here</button>`;
+  }else if(kind==='done'){
+    eyebrow='Cull complete';
+    h=`${n} keeper${n===1?'':'s'}`;
+    p=`Round ${RD.round} went by with no rejects, so these are your selects.${sample?'':(window.lss?' Sort the folder to move the rejects out of your shoot folder.':' Make a sorting file to move the rejects out of your shoot folder.')}`;
+    b=`<button class="btn primary big" data-a="grid">See keepers <kbd>Enter</kbd></button>${sample?'':`<button class="btn big" data-a="sort">${window.lss?'Sort the folder':'Make sorting file'}</button>`}<button class="btn big" data-a="again">Go around again</button><button class="btn big" data-a="undo">Undo last <kbd>⌫</kbd></button>`;
+  }else{
+    h='Nothing left';
+    p='Every frame in that round was rejected. Undo the last one, or go back to the grid to look through the rejects.';
+    b=`<button class="btn primary big" data-a="undo">Undo last <kbd>⌫</kbd></button><button class="btn big" data-a="exit">Back to grid</button>`;
+  }
+  rCard.innerHTML=`<div class="rbox"><span class="label">${eyebrow}</span><h2>${h}</h2><p>${p}</p><div class="rbtns">${b}</div></div>`;
+  updateRHud(); persist();
+}
+rCard.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(b)cardAction(b.dataset.a)});
+function closeCard(){rCard.hidden=true;RD.card=null;$('#rLast').innerHTML=''}
+function cardAction(a){
+  if(!RD) return;
+  if(a==='go'){goFull();closeCard();RD.i=0;RD.side='L';showR();persist()}
+  else if(a==='resume'){
+    goFull();
+    if(RD.was==='done'||RD.was==='between'||RD.was==='none'){roundCard(RD.was);return}
+    closeCard();showR();persist();
+  }
+  else if(a==='over'){dropSession(RD.sig);for(const it of items)it.f=0;persist();startRounds()}
+  else if(a==='cont'){rDirty=false;RD.card=null;openRounds()}
+  else if(a==='restart'){startRounds()}
+  else if(a==='exit') exitRounds();
+  else if(a==='grid'){exitRounds();setFilter('pick')}
+  else if(a==='sort') openSort();
+  else if(a==='again'){RD.round++;RD.dec=new Map();RD.hist=[];RD.prev=null;RD.i=0;roundCard('intro')}
+  else if(a==='undo'){ if(RD.prev){Object.assign(RD,RD.prev);RD.prev=null} closeCard(); rUndo(); }
+}
+function endRound(){
+  const s=roundStats();
+  const nextQ=RD.queue.filter(it=>RD.dec.get(it)!==-1);
+  RD.prev={queue:RD.queue,dec:RD.dec,hist:RD.hist,round:RD.round,i:RD.i,side:RD.side};
+  if(!nextQ.length){roundCard('none');return}
+  if(s.r===0&&s.u===0){roundCard('done');return}
+  RD.last=s; RD.round++; RD.queue=nextQ; RD.dec=new Map(); RD.hist=[]; RD.i=0; RD.side='L';
+  roundCard('between');
+}
+function nextUndecided(from){for(let j=from+1;j<RD.queue.length;j++) if(!RD.dec.has(RD.queue[j])) return j; return -1}
+function rightIdx(){return rTwo&&RD?nextUndecided(RD.i):-1}
+function decide(v){
+  if(!RD||RD.card) return;
+  const ri=rightIdx(), onRight=RD.side==='R'&&ri>=0;
+  const idx=onRight?ri:RD.i, it=RD.queue[idx]; if(!it) return;
+  RD.hist.push({i:RD.i,side:RD.side,it,f:it.f,d:RD.dec.get(it)});
+  it.f=v; RD.dec.set(it,v); flash(v,it);
+  if(onRight){ if(rightIdx()<0) RD.side='L'; persist(); showR(); return }
+  const n=nextUndecided(RD.i); persist();
+  if(n<0){endRound();return}
+  RD.i=n; showR();
+}
+function rNext(d){
+  if(!RD||RD.card) return;
+  const n=RD.i+d; if(n<0) return; if(n>=RD.queue.length){endRound();return}
+  RD.i=n; if(rightIdx()<0) RD.side='L'; persist(); showR();
+}
+function rUndo(){
+  if(!RD.hist.length&&RD.prev&&RD.i===0){Object.assign(RD,RD.prev);RD.prev=null}
+  const h=RD.hist.pop(); if(!h){toast('Nothing to undo');showR();return}
+  h.it.f=h.f; if(h.d===undefined) RD.dec.delete(h.it); else RD.dec.set(h.it,h.d);
+  RD.i=h.i; RD.side=h.side||'L'; persist(); $('#rLast').innerHTML=''; showR(); toast('Undone');
+}
+function flash(v,it){$('#rLast').innerHTML=`<span class="fno">${pad(it.no)}</span> <span class="rchip ${v===1?'k':'x'}">${v===1?'KEPT':'REJECTED'}</span>`}
+async function showR(){
+  if(!RD) return; const L=RD.queue[RD.i]; if(!L) return;
+  const ri=rightIdx(), Rt=ri>=0?RD.queue[ri]:null;
+  const tok=++rTok;
+  updateRHud();
+  const want=[L,Rt].filter(Boolean);
+  want.forEach(prefetch);
+  await Promise.all(want.map(it=>{const im=pool.get(it.id);return im?im.decode().catch(()=>{}):null}));
+  if(!RD||tok!==rTok) return;
+  rimg.src=L.url;
+  if(Rt) rimg2.src=Rt.url; else rimg2.removeAttribute('src');
+  layoutR();
+  for(const d of [1,2,3,4]) prefetch(RD.queue[RD.i+d]);
+}
+/* layout: one pane, or two side by side. Zoom is a shared focus point (0-1 across the frame) so it holds from frame to frame and across both panes */
+function paneRects(){const r=rstage.getBoundingClientRect(); if(rTwo){const g=10,w=(r.width-g)/2; return [{x:0,w,h:r.height},{x:w+g,w,h:r.height}]} return [{x:0,w:r.width,h:r.height}]}
+function placeImg(img,it,rc){
+  if(!it||!it.pw){img.hidden=true;return null}
+  img.hidden=false;
+  const sw=it.rot%180!==0, ew=sw?it.ph:it.pw, eh=sw?it.pw:it.ph;
+  const fit=Math.min(rc.w/ew,rc.h/eh), s=rZoom?Math.max(1,fit*2):fit, W=ew*s, H=eh*s;
+  let L=(rc.w-W)/2, T=(rc.h-H)/2;
+  if(rZoom){ if(W>rc.w) L=Math.min(0,Math.max(rc.w-W,rc.w/2-rF.x*W)); if(H>rc.h) T=Math.min(0,Math.max(rc.h-H,rc.h/2-rF.y*H)); }
+  const iw=it.pw*s, ih=it.ph*s, cx=L+W/2, cy=T+H/2;
+  img.style.width=iw+'px'; img.style.height=ih+'px'; img.style.left=(cx-iw/2)+'px'; img.style.top=(cy-ih/2)+'px';
+  img.style.transform=it.rot?`rotate(${it.rot}deg)`:'';
+  return {fit,s,W,H,rc};
+}
+function layoutR(){
+  if(!RD) return;
+  const rects=paneRects(), L=RD.queue[RD.i], ri=rightIdx(), Rt=ri>=0?RD.queue[ri]:null;
+  paneL.style.left=rects[0].x+'px'; paneL.style.width=rects[0].w+'px';
+  paneR.hidden=!rTwo;
+  if(rTwo){paneR.style.left=rects[1].x+'px'; paneR.style.width=rects[1].w+'px'}
+  rGeom=[placeImg(rimg,L,rects[0]), rTwo?placeImg(rimg2,Rt,rects[1]):null];
+  $('#rEmptyR').hidden=!(rTwo&&!Rt);
+  rstage.classList.toggle('zoomed',rZoom);
+  paneL.classList.toggle('active',rTwo&&RD.side==='L'); paneR.classList.toggle('active',rTwo&&RD.side==='R');
+  $('#rZoomV').textContent=rZoom&&rGeom[0]?`${Math.round(rGeom[0].s*100)}%`:'Fit';
+}
+function clampF(g){ if(!g) return; const hx=g.rc.w/2/g.W, hy=g.rc.h/2/g.H; rF.x=g.W>g.rc.w?Math.min(1-hx,Math.max(hx,rF.x)):.5; rF.y=g.H>g.rc.h?Math.min(1-hy,Math.max(hy,rF.y)):.5 }
+function paneAt(px){return (rTwo&&rGeom[1]&&px>=rGeom[1].rc.x)?1:0}
+function rToggleZoom(px,py){
+  if(!RD||RD.card) return;
+  if(rZoom){rZoom=false;layoutR();return}
+  rZoom=true;
+  if(px!=null){
+    const pi=paneAt(px), g=rGeom[pi];
+    if(g){
+      const lx=px-g.rc.x, L0=(g.rc.w-g.W)/2, T0=(g.rc.h-g.H)/2;
+      const fx=Math.min(1,Math.max(0,(lx-L0)/g.W)), fy=Math.min(1,Math.max(0,(py-T0)/g.H));
+      layoutR(); const g2=rGeom[pi];
+      if(g2){rF={x:(g2.rc.w/2-lx)/g2.W+fx, y:(g2.rc.h/2-py)/g2.H+fy}; clampF(g2)}
+    }
+  }
+  layoutR();
+}
+function setTwo(v){
+  rTwo=v; if(RD) RD.side='L';
+  try{localStorage.setItem('cullroom:two',v?'1':'0')}catch(e){}
+  $('#rTwoB').setAttribute('aria-pressed',String(v));
+  if(RD&&!RD.card) showR(); else layoutR();
+}
+function setSide(s){if(!RD||RD.card||!rTwo)return; if(s==='R'&&rightIdx()<0)return; RD.side=s; layoutR(); updateRHud()}
+function chip(it){const d=RD.dec.get(it);return d===1?'<span class="rchip k">KEPT</span>':d===-1?'<span class="rchip x">REJECTED</span>':''}
+function labelHTML(el,it,active){
+  if(!rTwo||!it){el.hidden=true;return}
+  el.hidden=false; el.classList.toggle('on',active);
+  el.innerHTML=`<span class="fno">${pad(it.no)}</span><span class="ln">${esc(it.name)}</span>${chip(it)}${active?'':'<kbd>Tab</kbd>'}`;
+}
+function burstHTML(cur,other){
+  if(!cur||!cur.burst) return '';
+  const mem=RD.queue.filter(x=>x.burst&&x.burst.id===cur.burst.id);
+  if(mem.length<2) return '';
+  if(mem.length>14) return `<span class="label">Burst</span><span>${mem.indexOf(cur)+1} / ${mem.length}</span>`;
+  return `<span class="label">Burst</span><span class="dots" aria-label="Frame ${mem.indexOf(cur)+1} of ${mem.length} in this burst">${mem.map(x=>{const d=RD.dec.get(x);return `<i class="${x===cur?'cur ':x===other?'pair ':''}${d===1?'k':d===-1?'x':''}"></i>`}).join('')}</span>`;
+}
+function updateRHud(){
+  if(!RD) return;
+  const it=RD.queue[RD.i], n=RD.queue.length, s=roundStats();
+  const ri=rightIdx(), Rt=ri>=0?RD.queue[ri]:null;
+  const act=rTwo&&RD.side==='R'&&Rt?Rt:it;
+  $('#rRound').textContent=`Round ${RD.round}`;
+  $('#rPos').textContent=`${Math.min(RD.i+1,n)} / ${n}`;
+  $('#rName').innerHTML=act&&!RD.card?`<span class="fno">${pad(act.no)}</span> ${esc(act.name)} ${chip(act)}`:'';
+  $('#rBurst').innerHTML=RD.card?'':burstHTML(act,rTwo?(act===it?Rt:it):null);
+  $('#rTally').innerHTML=`kept <b>${s.k}</b> · rejected <b>${s.r}</b>`;
+  $('#rProgI').style.width=(n?100*RD.i/n:0)+'%';
+  labelHTML($('#rlabL'),RD.card?null:it,RD.side==='L'); labelHTML($('#rlabR'),RD.card?null:Rt,RD.side==='R');
+}
+function roundsKey(e){
+  if(!RD){ if(e.key==='Escape'||e.key==='g'||e.key==='G'){e.preventDefault();showGrid()} return }
+  const k=e.key, mod=e.metaKey||e.ctrlKey, undoKey=k==='Backspace'||(mod&&k.toLowerCase()==='z');
+  if(RD.card){
+    const main={done:'grid',none:'exit',changed:'cont',resume:'resume',empty:null}[RD.card];
+    if(k==='Enter'||k===' '||(k==='2'&&RD.card!=='none'&&RD.card!=='empty')){ const a=main===undefined?'go':main; if(a) cardAction(a) }
+    else if(k==='g'||k==='G') showGrid();
+    else if(k==='Escape') exitRounds();
+    else if(undoKey){ if(RD.card!=='intro'&&RD.card!=='resume'||RD.prev) cardAction('undo') }
+    else return;
+    e.preventDefault(); return;
+  }
+  if(undoKey){e.preventDefault();rUndo();return}
+  if(mod||e.altKey) return;
+  switch(k){
+    case '1': case 'x': case 'X': decide(-1); break;
+    case '2': case 'p': case 'P': decide(1); break;
+    case 'ArrowRight': rNext(1); break;
+    case 'ArrowLeft': rNext(-1); break;
+    case 'z': case 'Z': case ' ': rToggleZoom(); break;
+    case 'c': case 'C': setTwo(!rTwo); break;
+    case 'Tab': setSide(RD.side==='L'?'R':'L'); break;
+    case 'Escape': if(rZoom) rToggleZoom(); else showGrid(); break;
+    case 'g': case 'G': showGrid(); break;
+    default: return;
+  }
+  e.preventDefault();
+}
+let rDrag=null;
+rstage.addEventListener('pointerdown',e=>{if(!RD||RD.card||e.target.closest('.rcard,.rlab'))return;const r=rstage.getBoundingClientRect();rDrag={x:e.clientX,y:e.clientY,f:{...rF},g:rGeom[paneAt(e.clientX-r.left)],moved:false};rstage.setPointerCapture(e.pointerId)});
+rstage.addEventListener('pointermove',e=>{if(!rDrag)return;const dx=e.clientX-rDrag.x,dy=e.clientY-rDrag.y;if(Math.abs(dx)+Math.abs(dy)>4)rDrag.moved=true;if(rZoom&&rDrag.moved&&rDrag.g){rF={x:rDrag.f.x-dx/rDrag.g.W,y:rDrag.f.y-dy/rDrag.g.H};clampF(rDrag.g);layoutR()}});
+rstage.addEventListener('pointerup',e=>{if(rDrag&&!rDrag.moved){const r=rstage.getBoundingClientRect();rToggleZoom(e.clientX-r.left,e.clientY-r.top)}rDrag=null});
+new ResizeObserver(()=>layoutR()).observe(rstage);
+$('#rlabL').onclick=()=>setSide('L'); $('#rlabR').onclick=()=>setSide('R');
+$('#rKeep').onclick=()=>decide(1);
+$('#rRej').onclick=()=>decide(-1);
+$('#rExit').onclick=()=>exitRounds();
+$('#rBack').onclick=()=>rNext(-1);
+$('#rSkip').onclick=()=>rNext(1);
+$('#rTwoB').onclick=()=>setTwo(!rTwo);
+$('#rTwoB').setAttribute('aria-pressed',String(rTwo));
+$('#rUndoB').onclick=()=>{if(!RD)return;if(RD.card){if(RD.card!=='intro'&&RD.card!=='resume'||RD.prev)cardAction('undo')}else rUndo()};
+$('#rGridB').onclick=()=>showGrid();
+$('#roundsBtn').onclick=openRounds;
+
+/* ---------- sorting file ---------- */
+let dlNS;
+(async()=>{try{dlNS=window.claude&&window.claude.use?await window.claude.use('downloads'):null}catch(e){dlNS=null}})();
+const sortSheet=$('#sortSheet');
+function shootRoot(){
+  const real=items.filter(i=>!i.sample&&i.file);
+  const roots=new Set(real.map(i=>i.path.includes('/')?i.path.split('/')[0]:''));
+  if(roots.size===1){const r=[...roots][0]; return {strip:!!r,label:r?`“${r}”`:'the shoot folder',name:r||'shoot'}}
+  return {strip:false,label:'the folder that holds them',name:'shoot'};
+}
+function sortOpts(){return {mode:$('#smKeep').checked?'keep':'rej',os:$('#soWin').checked?'win':'mac'}}
+function sortSet(mode){return items.filter(i=>!i.sample&&i.file&&(mode==='keep'?i.f===1:i.f===-1))}
+function buildScript(){
+  const {mode,os}=sortOpts(), root=shootRoot(), set=sortSet(mode);
+  const clean=s=>s.replace(/["'$`\\]/g,'');
+  const list=set.map(it=>`${it.file.size}|${root.strip?it.path.slice(it.path.indexOf('/')+1):it.path}`).join('\n');
+  const tpl=$(os==='win'?'#tplWin':'#tplMac').textContent.replace(/^\s*\n/,'');
+  const rep={__DATE__:new Date().toLocaleString(),__COUNT__:String(set.length),__WHAT__:mode==='keep'?'kept':'rejected',__ROOT__:clean(root.label.replace(/[“”]/g,'')),__DEST__:mode==='keep'?'Selects':'_Rejects',__LIST__:list};
+  let out=tpl; for(const [k,v] of Object.entries(rep)) out=out.split(k).join(v);
+  return {text:out,count:set.length,root,mode,os,filename:`Last Shot Standing sort - ${clean(root.name).slice(0,60)} (${os==='win'?'Windows':'Mac'}).txt`};
+}
+function updateSort(){
+  const s=buildScript(), un=items.filter(i=>!i.sample&&i.file&&i.f===0).length;
+  const dest=s.mode==='keep'?'Selects':'_Rejects';
+  $('#sortSummary').innerHTML=s.count?`Moves <b>${s.count}</b> ${s.mode==='keep'?'kept':'rejected'} frame${s.count===1?'':'s'} into a <b>${dest}</b> folder inside ${esc(s.root.label)}, along with any .JPG or .XMP files that share their names. Nothing is deleted, and a file only moves if its name and size match this cull.${un?` ${un} unflagged frame${un===1?' stays':'s stay'} where ${un===1?'it is':'they are'}.`:''}`
+    :`There are no ${s.mode==='keep'?'kept':'rejected'} frames yet, so there’s nothing to move.`;
+  $('#sortSave').disabled=!s.count;
+  if(DESK){ $('#sortSave').textContent=s.count?`Move ${s.count} ${s.mode==='keep'?'kept':'rejected'} frame${s.count===1?'':'s'}`:'Nothing to move'; $('#sortSummary').innerHTML=$('#sortSummary').innerHTML.replace('Moves <b>','This moves <b>'); }
+  const folder=esc(s.root.label);
+  $('#sortSteps').innerHTML=s.os==='mac'
+    ?`<li>Open <b>Last Shot Standing Sorter</b> from your Applications folder. It finds the newest sorting file in Downloads.</li><li>Click <b>Choose Folder…</b> and pick the shoot folder (${folder}). Done.</li><li class="alt">No Sorter on this Mac? Open Terminal, type <code>bash</code> and a space, drag the sorting file in, press Return, then drag in the shoot folder when it asks.</li>`
+    :`<li>Open PowerShell from the Start menu.</li><li>Type <code>iex (Get-Content -Raw </code>, drag the sorting file into the window, type <code>)</code> and press Enter.</li><li>When it asks, drag the shoot folder (${folder}) into the window and press Enter.</li>`;
+}
+const DESK=!!(window.lss&&window.lss.desktop);
+let lastMoves=null;
+if(DESK){ sortSheet.classList.add('desk'); $('#bSort').textContent='Sort folder'; }
+function deskRoot(set){
+  const it=set[0], abs=it.abs, rel=it.path, sep=abs.includes('\\')?'\\':'/';
+  const relN=rel.split('/').join(sep);
+  if(rel.includes('/')&&abs.endsWith(relN)) return abs.slice(0,abs.length-relN.length)+rel.split('/')[0];
+  return abs.slice(0,abs.lastIndexOf(sep));
+}
+async function deskSort(){
+  const {mode}=sortOpts(), all=sortSet(mode), set=all.filter(i=>i.abs);
+  if(!set.length){toast('Import the shoot again so the app knows where its files are');return}
+  const dest=mode==='keep'?'Selects':'_Rejects';
+  $('#sortSave').disabled=true; $('#sortSave').textContent='Moving files…';
+  let res;
+  try{ res=await window.lss.sort({files:set.map(i=>({path:i.abs,size:i.file.size})),root:deskRoot(set),destName:dest}) }
+  catch(err){ $('#sortSave').disabled=false; updateSort(); toast('Couldn’t move the files: '+(err&&err.message||'unknown error')); return }
+  lastMoves=res.moves;
+  const left=res.missing+(all.length-set.length);
+  const box=$('#sortResult'); box.hidden=false;
+  box.innerHTML=`<p>Moved <b>${res.frames}</b> frame${res.frames===1?'':'s'} into <b>${esc(dest)}</b> (${res.moved} file${res.moved===1?'':'s'}, counting matching .JPG and .XMP files).</p>${left?`<p>${left} frame${left===1?' was':'s were'} left alone because ${left===1?'it wasn’t':'they weren’t'} found or had changed.</p>`:''}<div class="rbtns">${res.moved?'<button class="btn" id="deskShow">Show '+esc(dest)+'</button><button class="btn" id="deskUndo">Put them back</button>':''}</div>`;
+  if(res.moved){
+    $('#deskShow').onclick=()=>window.lss.reveal(res.dest);
+    $('#deskUndo').onclick=async()=>{ const r=await window.lss.unsort(lastMoves); lastMoves=null; box.innerHTML=`<p>Put back ${r.restored} file${r.restored===1?'':'s'}. Your folder is the way it was.</p>`; updateSort(); };
+  }
+  $('#sortSave').textContent='Done'; $('#sortSave').disabled=true;
+}
+function openSort(){
+  if(sample||!items.some(i=>i.file)){toast('Import your own shoot first. The sample frames aren’t real files.');return}
+  if(!$('#soMac').checked&&!$('#soWin').checked) (/Win/i.test(navigator.userAgent)?$('#soWin'):$('#soMac')).checked=true;
+  $('#sortFallback').hidden=true; $('#sortResult').hidden=true; sortSheet.hidden=false; updateSort(); $('#sortSave').focus();
+}
+function closeSort(){sortSheet.hidden=true}
+sortSheet.addEventListener('change',()=>{$('#sortResult').hidden=true;updateSort()});
+sortSheet.addEventListener('click',e=>{if(e.target===sortSheet)closeSort()});
+$('#sortClose').onclick=closeSort;
+$('#bSort').onclick=openSort;
+$('#sortSave').onclick=async()=>{
+  if(DESK){deskSort();return}
+  const s=buildScript(); if(!s.count) return;
+  const fallback=()=>{$('#sortFallback').hidden=false;const ta=$('#sortText');ta.value=s.text;};
+  if(!dlNS){fallback();return}
+  try{await dlNS.save({filename:s.filename,data:s.text});toast('Sorting file saved. Follow the steps below.')}
+  catch(err){const c=err&&err.code; if(c==='declined') return; if(c==='rate_limited'){toast('A save is already waiting for you');return} fallback()}
+};
+$('#sortCopy').onclick=()=>{const ta=$('#sortText');try{navigator.clipboard.writeText(ta.value).then(()=>toast('Script copied'),()=>{ta.focus();ta.select()})}catch(e){ta.focus();ta.select()}};
+
+
+
+/* status */
+let toastT=0;
+function toast(t){let el=document.querySelector('.toast');if(!el){el=document.createElement('div');el.className='toast';el.setAttribute('role','status');document.body.appendChild(el)}el.textContent=t;el.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>el.hidden=true,1800)}
+function msg(t){$('#msg').textContent=t}
+function progress(d,t){if(!RD&&!rEl.hidden&&d<t)loadingCard(d,t);const p=$('#prog');if(d>=t){p.hidden=true;return}p.hidden=false;$('#progI').style.transform=`scaleX(${d/t})`;msg(`Reading previews ${d} / ${t}`)}
+
+/* ---------- sample shoot (generated frames) ---------- */
+function rng(seed){return()=>{seed=(seed*16807)%2147483647;return(seed-1)/2147483646}}
+function paint(kind,w,h,seed,blur){
+  const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');const R=rng(seed);
+  if(blur) x.filter=`blur(${blur}px)`;
+  const grad=(a,b,y0=0,y1=h)=>{const g=x.createLinearGradient(0,y0,0,y1);g.addColorStop(0,a);g.addColorStop(1,b);return g};
+  const hills=(y,col,amp)=>{x.fillStyle=col;x.beginPath();x.moveTo(0,h);for(let i=0;i<=w;i+=w/12)x.lineTo(i,y+Math.sin(i/w*6+seed)*amp+R()*amp*.4);x.lineTo(w,h);x.fill()};
+  if(kind==='dusk'){
+    x.fillStyle=grad('#2d2a5a','#f0a35e',0,h*.7);x.fillRect(0,0,w,h);
+    x.fillStyle='#ffd99a';x.beginPath();x.arc(w*(.55+R()*.1),h*.6,h*.09,0,7);x.fill();
+    hills(h*.62,'#5b3a4f',h*.05);hills(h*.72,'#2b1f2e',h*.06);
+    const fx=w*(.3+R()*.08);x.fillStyle='#120d14';x.beginPath();x.arc(fx,h*.6,h*.035,0,7);x.fill();x.fillRect(fx-h*.03,h*.63,h*.06,h*.14);
+    x.beginPath();x.arc(fx+h*.08,h*.61,h*.033,0,7);x.fill();x.fillRect(fx+h*.052,h*.64,h*.056,h*.13);
+  }else if(kind==='sea'){
+    x.fillStyle=grad('#6aa6d8','#d8ecf5',0,h*.5);x.fillRect(0,0,w,h*.5);
+    x.fillStyle=grad('#2f6f94','#163a52',h*.5,h);x.fillRect(0,h*.5,w,h*.5);
+    for(let i=0;i<40;i++){x.fillStyle=`rgba(255,255,255,${.1+R()*.25})`;x.fillRect(R()*w,h*.52+R()*h*.45,30+R()*90,2)}
+    x.fillStyle='#2a2522';x.beginPath();x.moveTo(w*.62,h);x.lineTo(w*(.7+R()*.05),h*.55);x.lineTo(w*.86,h*.62);x.lineTo(w,h*.7);x.lineTo(w,h);x.fill();
+  }else if(kind==='city'){
+    x.fillStyle=grad('#0b1026','#2a2140');x.fillRect(0,0,w,h);
+    let bx=0;while(bx<w){const bw=60+R()*120,bh=h*(.3+R()*.5);x.fillStyle='#14141c';x.fillRect(bx,h-bh,bw,bh);
+      for(let yy=h-bh+12;yy<h-10;yy+=18)for(let xx=bx+8;xx<bx+bw-10;xx+=16)if(R()>.55){x.fillStyle=R()>.8?'#ffd27a':'#f6b24a';x.fillRect(xx,yy,7,9)}
+      bx+=bw+4}
+  }else if(kind==='forest'){
+    x.fillStyle=grad('#c9dcc0','#4f6e45');x.fillRect(0,0,w,h);
+    for(let i=0;i<26;i++){const tx=R()*w,tw=8+R()*30;x.fillStyle=`rgba(${40+R()*30|0},${50+R()*30|0},${35+R()*20|0},${.5+R()*.5})`;x.fillRect(tx,0,tw,h)}
+    x.fillStyle='rgba(255,250,220,.18)';x.beginPath();x.moveTo(w*.3,0);x.lineTo(w*.5,0);x.lineTo(w*.8,h);x.lineTo(w*.45,h);x.fill();
+  }else{ // portrait
+    x.fillStyle=grad('#8a8f97','#4a4e55');x.fillRect(0,0,w,h);
+    const cx=w*(.48+R()*.06);
+    x.fillStyle='#3b2a24';x.beginPath();x.ellipse(cx,h*.36,w*.2,h*.17,0,0,7);x.fill();
+    x.fillStyle='#c79b80';x.beginPath();x.ellipse(cx,h*.4,w*.15,h*.13,0,0,7);x.fill();
+    x.fillStyle='#2c3a4f';x.beginPath();x.ellipse(cx,h*.98,w*.42,h*.36,0,0,7);x.fill();
+    x.fillStyle='#2a1d18';const ey=h*.39,open=R()>.2;
+    for(const s of[-1,1]){x.beginPath();x.ellipse(cx+s*w*.055,ey,w*.022,open?h*.01:h*.002,0,0,7);x.fill()}
+  }
+  x.filter='none';
+  return c;
+}
+async function loadSample(){
+  const plan=[
+    ['dusk',0],['dusk',0],['dusk',9],['dusk',0],
+    ['portrait',0],['portrait',0],['portrait',7],['portrait',0],
+    ['sea',0],['sea',0],['sea',5],
+    ['city',0],['city',0],['city',0],
+    ['forest',0],['forest',6]
+  ];
+  const exp=[['1/250',2.8,200,85],['1/320',2.8,200,85],['1/60',2.8,200,85],['1/250',4,200,85],['1/200',1.8,400,50],['1/200',1.8,400,50],['1/40',1.8,400,50],['1/200',2,400,50],['1/1000',8,100,24],['1/1000',8,100,24],['1/125',8,100,24],['1/60',1.4,3200,35],['1/60',1.4,3200,35],['1/80',1.4,3200,35],['1/160',4,800,35],['1/30',4,800,35]];
+  items=[]; let tms=0;
+  for(let i=0;i<plan.length;i++){
+    const [kind,blur]=plan[i]; tms+=(i&&plan[i-1][0]===kind)?250:60000; const vert=kind==='portrait';
+    const w=vert?1000:1500,h=vert?1500:1000;
+    const big=paint(kind,w,h,1000+i*7+(kind==='dusk'?0:i),blur);
+    const blob=await new Promise(r=>big.toBlob(r,'image/jpeg',.88));
+    if(!sample) return; // a real shoot was imported while the sample was still being made
+    const url=URL.createObjectURL(blob);
+    const [t,f,iso,fl]=exp[i];
+    const [n,d]=t.split('/').map(Number);
+    items.push({id:nextId++,key:'sample'+i,sample:true,file:null,name:`SAMPLE_${String(4210+i).padStart(4,'0')}.ARW`,raw:true,f:0,s:0,userRot:0,baseRot:0,rot:0,pw:w,ph:h,url,thumb:url,meta:{expPair:[n,d],0x829D:f,0x8827:iso,0x920A:fl,0x110:'Sample frames',0x9003:`2026:10:18 17:${String(20+Math.floor(tms/60000)).padStart(2,'0')}:00`},time:tms,err:null});
+  }
+  if(!sample) return;
+  numberFrames(); computeBursts(); rebuild(false);
+  startRounds();
+}
+loadSample();
+})();
+</script>

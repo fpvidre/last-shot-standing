@@ -1,0 +1,61 @@
+# Last Shot Standing
+
+**Cull a photo shoot in rounds. Keep what's left.**
+
+Last Shot Standing is a free photo culling app for Mac and Windows. Import a folder of RAWs, then go through the shoot full screen: press **2** to keep a frame and **1** to reject it. Keepers come back in the next round, and it keeps going around until a round goes by with no rejects. Those are your selects.
+
+When you're done, one click moves the rejects into a `_Rejects` folder inside your shoot. Nothing is ever deleted, and **Put them back** undoes it.
+
+## Download
+
+Get the latest version from the [Releases page](https://github.com/fpvidre/last-shot-standing/releases/latest):
+
+- **Mac:** `Last Shot Standing-<version>-universal.dmg` (Apple Silicon and Intel)
+- **Windows:** `Last-Shot-Standing-Setup-<version>.exe`
+
+### First launch
+
+The app isn't code-signed yet, so your computer will warn you the first time.
+
+- **Mac:** open the app, click **Done** on the warning, then go to **System Settings › Privacy & Security**, scroll down and click **Open Anyway**. After that it opens normally.
+- **Windows:** on the "Windows protected your PC" screen, click **More info**, then **Run anyway**.
+
+## What it does
+
+- **Rounds:** full-screen keep or reject, one frame at a time, until only keepers remain.
+- **Side by side:** press **C** to compare two frames. **Tab** switches which one 1 and 2 apply to.
+- **Zoom that holds:** press **Z** or click to check focus at 100%. The zoom stays on the same spot as you move through a burst.
+- **Bursts:** frames shot within a second of each other are grouped, with a dot for each frame in the top bar.
+- **Pick up later:** progress saves as you go. Import the same folder again to resume where you stopped.
+- **Sorting:** rejects (or keepers) move into their own folder along with matching .JPG and .XMP files. A file only moves if its name and size still match the cull.
+
+Supports the embedded previews in Sony (ARW), Canon (CR2, CR3), Nikon (NEF), Fujifilm (RAF), DNG, Olympus, Panasonic and Pentax RAW files, plus JPG.
+
+## Keys
+
+| Key | Action |
+| --- | --- |
+| 2 | Keep |
+| 1 | Reject |
+| → / ← | Skip / back |
+| Z or Space | Zoom to 100% |
+| C | Side by side |
+| Tab | Switch side |
+| Backspace | Undo |
+| G | Grid view |
+| F | Back to rounds |
+
+## Building it yourself
+
+```bash
+npm install
+npm start          # run the app
+npm test           # check the folder sorting
+npm run dist       # build an installer into dist/
+```
+
+To publish a new version, bump `version` in `package.json`, then push a tag such as `v1.0.1`. GitHub Actions builds the Mac and Windows apps and attaches them to a release.
+
+---
+
+Made by [FPVI Productions](https://fpvi.productions). Fonts: Montserrat (SIL Open Font License) and Ubuntu (Ubuntu Font Licence), included in `app/fonts`.
