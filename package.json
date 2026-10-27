@@ -1,7 +1,7 @@
 {
   "name": "last-shot-standing",
   "productName": "Last Shot Standing",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Cull a photo shoot in rounds: keep or reject until only the best shots are left.",
   "main": "main.js",
   "author": "FPVI Productions",

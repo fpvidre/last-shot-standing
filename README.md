@@ -30,6 +30,7 @@ The app isn't code-signed yet, so your computer will warn you the first time.
 - **Side by side:** press **C** to compare two frames. **Tab** switches which one 1 and 2 apply to.
 - **Deep zoom:** scroll or pinch to zoom up to 800%, centered on your pointer, or press **Z** or click to jump to 100%. Past 200% you see the real pixels, unsmoothed. The zoom holds on the same spot as you move through a burst.
 - **Bursts:** frames shot within a second of each other are grouped, with a dot for each frame in the top bar.
+- **Auto-reject skipped:** flip the switch in the top bar and any frame you skip or don't reach is rejected when the round ends, instead of coming back. Sorting moves those frames too. Undo on the round summary puts them back.
 - **Pick up later:** progress saves as you go. Import the same folder again to resume where you stopped.
 - **Sorting:** rejects (or keepers) move into their own folder along with matching .JPG and .XMP files. A file only moves if its name and size still match the cull.
 

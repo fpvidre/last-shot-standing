@@ -264,6 +264,18 @@ kbd{font-family:var(--font-ui);font-weight:500}
 .btn,.ricon,.seg button,.starbtns button{transition:transform 140ms var(--ease-out),background-color 120ms ease,border-color 120ms ease,color 120ms ease}
 .btn:active,.ricon:not(.static):active,.seg button:active,.starbtns button:active{transform:scale(0.97)}
 .rcard{transition:opacity 180ms var(--ease-out)}
+/* on/off switch */
+.tog{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--muted);user-select:none;white-space:nowrap}
+.tog input{position:absolute;opacity:0;width:1px;height:1px}
+.tog-ui{width:30px;height:18px;border-radius:9px;background:var(--line);position:relative;flex:none;transition:background-color 120ms ease}
+.tog-ui::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--fg);transition:transform 160ms var(--ease-out)}
+.tog input:checked+.tog-ui{background:var(--mark)}
+.tog input:checked+.tog-ui::after{transform:translateX(12px);background:#161818}
+.tog input:checked~span:last-child{color:var(--fg)}
+.tog input:focus-visible+.tog-ui{outline:2px solid var(--mark);outline-offset:2px}
+.tog-sheet{flex-basis:100%;font-size:14px}
+@media (max-width:900px){.rtop .tog span:last-child{display:none}}
+@media (prefers-reduced-motion:reduce){.tog-ui,.tog-ui::after{transition:none}}
 /* spacing pass */
 .rounds{row-gap:8px}
 .btn.primary kbd{background:rgba(22,24,24,.1);border-color:rgba(22,24,24,.25);color:var(--brand-ink)}
@@ -402,6 +414,7 @@ kbd{font-family:var(--font-ui);font-weight:500}
     <span class="rburst" id="rBurst"></span>
     <span class="rlast" id="rLast"></span>
     <span class="rtally" id="rTally"></span>
+    <label class="tog" title="When a round ends, frames you skipped or didn’t reach count as rejects instead of coming back. Sorting also moves them."><input type="checkbox" id="autoRejT"><span class="tog-ui" aria-hidden="true"></span><span>Auto-reject skipped</span></label>
     <label class="btn" for="pickDir">Import folder</label>
     <button class="btn" id="rExit">Grid <kbd>G</kbd></button>
   </div>
@@ -430,6 +443,7 @@ kbd{font-family:var(--font-ui);font-weight:500}
         <label><input type="radio" name="sortMode" id="smRej" value="rej" checked> Rejects into <b>_Rejects</b></label>
         <label><input type="radio" name="sortMode" id="smKeep" value="keep"> Keepers into <b>Selects</b></label>
       </fieldset>
+      <label class="tog tog-sheet" id="autoRejRow"><input type="checkbox" id="autoRejS"><span class="tog-ui" aria-hidden="true"></span><span>Also move frames you never kept or rejected</span></label>
       <fieldset class="os-only"><legend class="label">Computer</legend>
         <label><input type="radio" name="sortOs" id="soMac" value="mac"> Mac</label>
         <label><input type="radio" name="sortOs" id="soWin" value="win"> Windows</label>
@@ -1097,7 +1111,7 @@ function roundCard(kind){
   }else if(kind==='between'){
     const s=RD.last||{k:n,r:0,u:0};
     h=`Round ${RD.round-1} done`;
-    p=`Kept ${s.k}, rejected ${s.r}${s.u?`, skipped ${s.u}`:''}. Round ${RD.round} has ${n} frame${n===1?'':'s'}.`;
+    p=`Kept ${s.k}, rejected ${s.r}${s.auto?` (${s.auto} skipped, so rejected automatically)`:''}${s.u?`, skipped ${s.u}`:''}. Round ${RD.round} has ${n} frame${n===1?'':'s'}.`;
     b=`<button class="btn primary big" data-a="go">Start round ${RD.round} <kbd>Enter</kbd></button><button class="btn big" data-a="undo">Undo last <kbd>⌫</kbd></button><button class="btn big" data-a="exit">Stop here</button>`;
   }else if(kind==='done'){
     eyebrow='Cull complete';
@@ -1129,12 +1143,19 @@ function cardAction(a){
   else if(a==='grid'){exitRounds();setFilter('pick')}
   else if(a==='sort') openSort();
   else if(a==='again'){RD.round++;RD.dec=new Map();RD.hist=[];RD.prev=null;RD.i=0;roundCard('intro')}
-  else if(a==='undo'){ if(RD.prev){Object.assign(RD,RD.prev);RD.prev=null} closeCard(); rUndo(); }
+  else if(a==='undo'){
+    const auto=RD.prev&&RD.prev.auto&&RD.prev.auto.length?RD.prev.auto:null;
+    if(RD.prev){Object.assign(RD,RD.prev);RD.prev=null}
+    if(auto){ for(const x of auto){ x.it.f=x.f; RD.dec.delete(x.it); } RD.auto=null; persist(); closeCard(); showR(); toast(`Undid ${auto.length} automatic reject${auto.length===1?'':'s'}`); return }
+    closeCard(); rUndo();
+  }
 }
 function endRound(){
-  const s=roundStats();
+  const auto=[];
+  if(autoRej){ for(const it of RD.queue){ if(!RD.dec.has(it)){ auto.push({it,f:it.f}); it.f=-1; RD.dec.set(it,-1); } } if(auto.length) persist(); }
+  const s=roundStats(); s.auto=auto.length;
   const nextQ=RD.queue.filter(it=>RD.dec.get(it)!==-1);
-  RD.prev={queue:RD.queue,dec:RD.dec,hist:RD.hist,round:RD.round,i:RD.i,side:RD.side};
+  RD.prev={queue:RD.queue,dec:RD.dec,hist:RD.hist,round:RD.round,i:RD.i,side:RD.side,auto};
   if(!nextQ.length){roundCard('none');return}
   if(s.r===0&&s.u===0){roundCard('done');return}
   RD.last=s; RD.round++; RD.queue=nextQ; RD.dec=new Map(); RD.hist=[]; RD.i=0; RD.side='L';
@@ -1330,7 +1351,7 @@ function shootRoot(){
   return {strip:false,label:'the folder that holds them',name:'shoot'};
 }
 function sortOpts(){return {mode:$('#smKeep').checked?'keep':'rej',os:$('#soWin').checked?'win':'mac'}}
-function sortSet(mode){return items.filter(i=>!i.sample&&i.file&&(mode==='keep'?i.f===1:i.f===-1))}
+function sortSet(mode){return items.filter(i=>!i.sample&&i.file&&(mode==='keep'?i.f===1:(i.f===-1||(autoRej&&i.f===0))))}
 function buildScript(){
   const {mode,os}=sortOpts(), root=shootRoot(), set=sortSet(mode);
   const clean=s=>s.replace(/["'$`\\]/g,'');
@@ -1341,7 +1362,9 @@ function buildScript(){
   return {text:out,count:set.length,root,mode,os,filename:`Last Shot Standing sort - ${clean(root.name).slice(0,60)} (${os==='win'?'Windows':'Mac'}).txt`};
 }
 function updateSort(){
-  const s=buildScript(), un=items.filter(i=>!i.sample&&i.file&&i.f===0).length;
+  const un0=items.filter(i=>!i.sample&&i.file&&i.f===0).length;
+  const s=buildScript(), un=(autoRej&&s.mode!=='keep')?0:un0;
+  $('#autoRejRow').hidden=s.mode==='keep'||!un0; $('#autoRejS').checked=autoRej;
   const dest=s.mode==='keep'?'Selects':'_Rejects';
   $('#sortSummary').innerHTML=s.count?`Moves <b>${s.count}</b> ${s.mode==='keep'?'kept':'rejected'} frame${s.count===1?'':'s'} into a <b>${dest}</b> folder inside ${esc(s.root.label)}, along with any .JPG or .XMP files that share their names. Nothing is deleted, and a file only moves if its name and size match this cull.${un?` ${un} unflagged frame${un===1?' stays':'s stay'} where ${un===1?'it is':'they are'}.`:''}`
     :`There are no ${s.mode==='keep'?'kept':'rejected'} frames yet, so there’s nothing to move.`;
@@ -1409,13 +1432,25 @@ if(window.lss&&window.lss.onUpdate){
       $('#updMsg').textContent=`Version ${info.version} is downloaded and will install when you quit.`;
       $('#updGo').textContent='Restart now'; $('#updGo').onclick=()=>window.lss.installUpdate();
     }else{
-      $('#updMsg').textContent=`Version ${info.version} is out. You have ${info.current||'an older version'}.`;
+      $('#updMsg').textContent=`Version ${info.version} is out. You have ${info.current||'an older version'}. When you drag it into Applications, choose Replace.`;
       $('#updGo').textContent='Download'; $('#updGo').onclick=()=>{window.lss.openDownload(info.url);box.hidden=true};
     }
     box.hidden=false;
   });
   $('#updLater').onclick=()=>{$('#upd').hidden=true};
 }
+
+/* auto-reject switch: one setting, shown in rounds and in the sorting panel */
+let autoRej=false;
+try{autoRej=localStorage.getItem('cullroom:autoreject')==='1'}catch(e){}
+function setAutoRej(v){
+  autoRej=!!v; $('#autoRejT').checked=autoRej; $('#autoRejS').checked=autoRej;
+  try{localStorage.setItem('cullroom:autoreject',autoRej?'1':'0')}catch(e){}
+  if(!sortSheet.hidden) updateSort();
+}
+$('#autoRejT').checked=autoRej;
+$('#autoRejT').addEventListener('change',e=>{setAutoRej(e.target.checked);e.target.blur();toast(autoRej?'Skipped frames will be rejected at the end of each round':'Skipped frames come back next round')});
+$('#autoRejS').addEventListener('change',e=>setAutoRej(e.target.checked));
 
 /* status */
 let toastT=0;
