@@ -26,12 +26,12 @@ The app isn't code-signed yet, so your computer will warn you the first time.
 
 ## What it does
 
-- **Rounds:** full-screen keep or reject, one frame at a time, until only keepers remain.
+- **Rounds:** full-screen keep or reject, one frame at a time, until only keepers remain. Rejects get thrown off to the left with a REJECT stamp, keepers to the right with a KEEP stamp, and the next frame is ready instantly.
 - **Side by side:** press **C** to compare two frames. **Tab** switches which one 1 and 2 apply to.
 - **Deep zoom:** scroll or pinch to zoom up to 800%, centered on your pointer, or press **Z** or click to jump to 100%. Past 200% you see the real pixels, unsmoothed. The zoom holds on the same spot as you move through a burst.
 - **Bursts:** frames shot within a second of each other are grouped, with a dot for each frame in the top bar.
 - **Auto-reject skipped:** flip the switch in the top bar and any frame you skip or don't reach is rejected when the round ends, instead of coming back. Sorting moves those frames too. Undo on the round summary puts them back.
-- **Your own keys:** click **Keys** to set Keep and Reject to any key you like. Keys the app already uses are blocked so nothing clashes.
+- **Settings** (⌘ , or Ctrl ,): choose the swipe speed (Quick, Default or Slow) and set Keep and Reject to any key you like. Keys the app already uses are blocked so nothing clashes.
 - **Pick up later:** progress saves as you go. Import the same folder again to resume where you stopped.
 - **Sorting:** rejects (or keepers) move into their own folder along with matching .JPG and .XMP files. A file only moves if its name and size still match the cull.
 
@@ -41,8 +41,8 @@ Supports the embedded previews in Sony (ARW), Canon (CR2, CR3), Nikon (NEF), Fuj
 
 | Key | Action |
 | --- | --- |
-| 2 | Keep (change it under **Keys**) |
-| 1 | Reject (change it under **Keys**) |
+| 2 | Keep (change it in **Settings**) |
+| 1 | Reject (change it in **Settings**) |
 | → / ← | Skip / back |
 | Z or Space | Zoom to 100% / back to fit |
 | + / − | Zoom in / out a step (up to 800%) |
@@ -52,6 +52,7 @@ Supports the embedded previews in Sony (ARW), Canon (CR2, CR3), Nikon (NEF), Fuj
 | Backspace | Undo |
 | G | Grid view |
 | F | Back to rounds |
+| ⌘ , / Ctrl , | Settings |
 
 ## Building it yourself
 

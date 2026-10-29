@@ -278,6 +278,16 @@ kbd{font-family:var(--font-ui);font-weight:500}
 .binderr{min-height:1.5em;font-size:13px}
 .binderr.bad{color:var(--reject)}
 .ricon .rk{font-size:12px}
+.setsec{display:grid;gap:8px;padding-top:14px;border-top:1px solid var(--line)}
+.setsec h3{margin:0;font-family:var(--font-display);font-weight:800;font-size:16px;color:var(--fg)}
+.setsec .seg{justify-self:start}
+.setsec .seg button{padding:8px 16px}
+/* the thrown frame: a copy of the photo that flies off while the next one is already live */
+.fly{position:absolute;inset:0;pointer-events:none;z-index:2;will-change:transform,opacity}
+.fly-img{box-shadow:0 18px 40px rgba(0,0,0,.45);border-radius:3px}
+.stamp{position:absolute;padding:.12em .38em .08em;border:.12em solid currentColor;border-radius:.2em;font-family:var(--font-display);font-weight:900;letter-spacing:.06em;line-height:1;background:rgba(10,10,10,.18);white-space:nowrap}
+.stamp.rej{color:var(--reject);transform:rotate(14deg)}
+.stamp.keep{color:var(--mark);transform:rotate(-14deg)}
 /* on/off switch */
 .tog{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--muted);user-select:none;white-space:nowrap}
 .tog input{position:absolute;opacity:0;width:1px;height:1px}
@@ -419,7 +429,7 @@ body{margin:0}
     <button class="btn" id="bAuto" aria-pressed="true">Auto-advance: on</button>
     <button class="btn" id="bCopy" title="Copy the file names currently shown">Copy file names</button>
     <button class="btn" id="bSort">Sorting file</button>
-    <button class="btn" id="bKeys">Keys</button>
+    <button class="btn" id="bKeys">Settings</button>
     <div class="status"><span id="msg" class="hint">Press F to go back to rounds.</span><div class="prog" id="prog" hidden><i id="progI"></i></div></div>
   </footer>
 </div>
@@ -447,7 +457,7 @@ body{margin:0}
       <span class="ricon static" title="Scroll or pinch to zoom up to 800%. + and − step, Z toggles."><kbd>Z</kbd> <span id="rZoomV">Fit</span></span>
       <button class="ricon" id="rTwoB" title="Side by side (C)" aria-label="Side by side" aria-pressed="false"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="8" height="14" rx="1"/><rect x="13" y="5" width="8" height="14" rx="1"/></svg><kbd>C</kbd></button>
       <button class="ricon" id="rUndoB" title="Undo (Backspace)" aria-label="Undo"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg><kbd>⌫</kbd></button>
-      <button class="ricon" id="rKeysB" title="Choose your keep and reject keys" aria-label="Keys"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg><span class="rk">Keys</span></button>
+      <button class="ricon" id="rKeysB" title="Settings (⌘ ,)" aria-label="Settings"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span class="rk">Settings</span></button>
       <button class="ricon" id="rGridB" title="Grid (G)" aria-label="Grid"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/></svg><kbd>G</kbd></button>
     </div>
   </div>
@@ -577,15 +587,24 @@ if ($missing -gt 0) { Write-Host "Left alone because they weren't found or had c
 
 <div class="sheetwrap" id="keysSheet" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="keysTitle">
-    <span class="label">Keyboard</span>
-    <h2 id="keysTitle">Keep and reject keys</h2>
+    <span class="label">Last Shot Standing</span>
+    <h2 id="keysTitle">Settings</h2>
+    <section class="setsec">
+      <h3>Swipe speed</h3>
+      <p>How fast a kept or rejected frame flies off the screen. You can keep culling while it moves.</p>
+      <div class="seg" id="speedSeg" role="group" aria-label="Swipe speed"><button data-sp="quick" aria-pressed="false">Quick</button><button data-sp="default" aria-pressed="true">Default</button><button data-sp="slow" aria-pressed="false">Slow</button></div>
+    </section>
+    <section class="setsec">
+    <h3>Keep and reject keys</h3>
     <p>Pick any key you like. The app already uses Z, C, G, F, the arrows, Space, Tab and a few others, so those can’t be chosen.</p>
     <div class="bindrows">
       <div class="bindrow"><span class="bindname">Keep</span><kbd class="bindkey" id="bindKeep">2</kbd><button class="btn" id="bindKeepBtn">Change</button></div>
       <div class="bindrow"><span class="bindname">Reject</span><kbd class="bindkey" id="bindRej">1</kbd><button class="btn" id="bindRejBtn">Change</button></div>
     </div>
     <p class="binderr" id="bindMsg" role="status"></p>
-    <div class="rbtns"><button class="btn primary big" id="keysDone">Done</button><button class="btn big" id="keysReset">Reset to 2 and 1</button></div>
+    <div><button class="btn" id="keysReset">Reset to 2 and 1</button></div>
+    </section>
+    <div class="rbtns"><button class="btn primary big" id="keysDone">Done</button></div>
   </div>
 </div>
 
@@ -978,6 +997,7 @@ document.addEventListener('keydown',e=>{
   if(e.target.matches('input,textarea,select')&&e.key!=='Escape'&&sortSheet.hidden&&keysSheet.hidden) return;
   const k=e.key, mod=e.metaKey||e.ctrlKey;
   if(!keysSheet.hidden){keysKey(e);return}
+  if((e.metaKey||e.ctrlKey)&&k===','){e.preventDefault();openKeys();return}
   if(!sortSheet.hidden){if(e.key==='Escape'){e.preventDefault();closeSort()}return}
   if(!rEl.hidden){roundsKey(e);return}
   if(mod&&k.toLowerCase()==='z'){e.preventDefault();doUndo();return}
@@ -1203,12 +1223,47 @@ function endRound(){
   RD.last=s; RD.round++; RD.queue=nextQ; RD.dec=new Map(); RD.hist=[]; RD.i=0; RD.side='L';
   roundCard('between');
 }
+/* swipe: Reject throws the frame left, Keep throws it right, with a stamp.
+   Input never waits on it: the next frame is live the moment the key is pressed. */
+const SPEEDS={quick:380,default:520,slow:700};
+let swipeSpeed='default';
+try{const v=localStorage.getItem('lss:swipe-speed');if(SPEEDS[v])swipeSpeed=v}catch(e){}
+const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)');
+function swipe(v,pi){
+  const img=pi?rimg2:rimg, pane=pi?paneR:paneL, g=rGeom[pi];
+  if(!g||img.hidden||!img.getAttribute('src')) return;
+  const dir=v===1?1:-1, d=SPEEDS[swipeSpeed];
+  const vx0=Math.max(0,g.L), vy0=Math.max(0,g.T), vx1=Math.min(g.rc.w,g.L+g.W), vy1=Math.min(g.rc.h,g.T+g.H), vw=vx1-vx0, vh=vy1-vy0;
+  if(vw<=0||vh<=0) return;
+  const fly=document.createElement('div'); fly.className='fly';
+  const copy=img.cloneNode(); copy.removeAttribute('id'); copy.className='fly-img'; copy.alt='';
+  const st=document.createElement('span'); st.className='stamp '+(v===1?'keep':'rej'); st.textContent=v===1?'KEEP':'REJECT';
+  st.style.fontSize=Math.round(Math.max(20,Math.min(64,Math.min(vw,vh)*0.09)))+'px';
+  st.style.top=(vy0+vh*0.07)+'px';
+  if(v===1) st.style.left=(vx0+vw*0.07)+'px'; else st.style.right=(g.rc.w-vx1+vw*0.07)+'px';
+  fly.append(copy,st);
+  fly.style.transformOrigin=`${vx0+vw/2}px ${vy1+vh*0.15}px`;
+  pane.appendChild(fly);
+  if(reduceMotion.matches){
+    fly.animate([{opacity:1},{opacity:1,offset:.5},{opacity:0}],{duration:d,fill:'forwards'}).onfinish=()=>fly.remove();
+    return;
+  }
+  const dist=g.rc.w*0.75+vw*0.6;
+  fly.animate([
+    {transform:'translateX(0) rotate(0deg)',opacity:1},
+    {transform:`translateX(${dir*dist*0.35}px) rotate(${dir*6}deg)`,opacity:1,offset:.35},
+    {transform:`translateX(${dir*dist}px) rotate(${dir*18}deg)`,opacity:0}
+  ],{duration:d,easing:'cubic-bezier(0.25,0.6,0.35,1)',fill:'forwards'}).onfinish=()=>fly.remove();
+  st.animate([{transform:`rotate(${-dir*14}deg) scale(1.35)`,opacity:0},{transform:`rotate(${-dir*14}deg) scale(1)`,opacity:1}],{duration:90,easing:'cubic-bezier(0.23,1,0.32,1)',fill:'both'});
+  img.animate([{scale:'0.97'},{scale:'1'}],{duration:d*.75,easing:'cubic-bezier(0.23,1,0.32,1)'});
+}
 function nextUndecided(from){for(let j=from+1;j<RD.queue.length;j++) if(!RD.dec.has(RD.queue[j])) return j; return -1}
 function rightIdx(){return rTwo&&RD?nextUndecided(RD.i):-1}
 function decide(v){
   if(!RD||RD.card) return;
   const ri=rightIdx(), onRight=RD.side==='R'&&ri>=0;
   const idx=onRight?ri:RD.i, it=RD.queue[idx]; if(!it) return;
+  swipe(v,onRight?1:0);
   RD.hist.push({i:RD.i,side:RD.side,it,f:it.f,d:RD.dec.get(it)});
   it.f=v; RD.dec.set(it,v); flash(v,it);
   if(onRight){ if(rightIdx()<0) RD.side='L'; persist(); showR(); return }
@@ -1517,9 +1572,9 @@ function stopListening(){
 }
 function saveBinds(){try{localStorage.setItem('cullroom:binds',JSON.stringify(binds))}catch(e){}}
 function keysKey(e){
-  e.preventDefault(); e.stopPropagation();
   const m=$('#bindMsg');
-  if(!listening){ if(e.key==='Escape'||e.key==='Enter') closeKeys(); return }
+  if(!listening){ if(e.key==='Escape'||((e.metaKey||e.ctrlKey)&&e.key===',')){e.preventDefault();closeKeys()} return }
+  e.preventDefault(); e.stopPropagation();
   if(e.key==='Escape'){stopListening();m.textContent='';return}
   if(e.metaKey||e.ctrlKey||e.altKey){m.classList.add('bad');m.textContent='Use a single key, without ⌘, Ctrl or Option.';return}
   if(e.key.length!==1){m.classList.add('bad');m.textContent=`${e.key.replace('Arrow','Arrow ')} is already used for moving around. Try a letter, number or symbol.`;return}
@@ -1538,6 +1593,9 @@ $('#keysDone').onclick=closeKeys;
 $('#keysReset').onclick=()=>{binds={...DEFAULT_BINDS};saveBinds();stopListening();paintBinds();const m=$('#bindMsg');m.classList.remove('bad');m.textContent='Back to 2 for Keep and 1 for Reject.'};
 keysSheet.addEventListener('click',e=>{if(e.target===keysSheet)closeKeys()});
 $('#rKeysB').onclick=openKeys; $('#bKeys').onclick=openKeys;
+function paintSpeed(){document.querySelectorAll('#speedSeg button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.sp===swipeSpeed)))}
+$('#speedSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;swipeSpeed=b.dataset.sp;try{localStorage.setItem('lss:swipe-speed',swipeSpeed)}catch(err){}paintSpeed()});
+paintSpeed();
 paintBinds();
 
 /* status */
