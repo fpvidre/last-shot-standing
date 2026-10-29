@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Last Shot Standing</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' blob: data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; font-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' blob: data: lss:; connect-src 'self' lss:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; font-src 'self'">
 <style>
 @font-face{font-family:'Montserrat';font-style:normal;font-weight:500;font-display:swap;src:url('fonts/montserrat-latin-500-normal.woff2') format('woff2')}
 @font-face{font-family:'Montserrat';font-style:normal;font-weight:600;font-display:swap;src:url('fonts/montserrat-latin-600-normal.woff2') format('woff2')}
@@ -623,6 +623,13 @@ try{const b=JSON.parse(localStorage.getItem('cullroom:binds')||'null');if(b&&typ
 const normKey=k=>k.length===1?k.toLowerCase():k;
 function isBind(e,which){return !e.metaKey&&!e.ctrlKey&&!e.altKey&&normKey(e.key)===binds[which]}
 function kbLabel(which){const k=binds[which];return k===' '?'Space':k.toUpperCase()}
+class DiskFile{
+  constructor(f,rootName){this.abs=f.abs;this.name=f.name;this.size=f.size;this._rel=rootName+'/'+f.rel;this.disk=true}
+  url(s,e,t){let u='lss://f/?p='+encodeURIComponent(this.abs);if(s!=null)u+='&s='+s+'&e='+e;if(t)u+='&t='+encodeURIComponent(t);return u}
+  arrayBuffer(){return fetch(this.url()).then(r=>{if(!r.ok)throw new Error('read failed');return r.arrayBuffer()})}
+  slice(s,e,t){const u=this.url(s,e,t);return {disk:true,url:u,arrayBuffer:()=>fetch(u).then(r=>r.arrayBuffer())}}
+}
+let shootRootAbs='', lastShootSave=null;
 let items=[], view=[], cur=0, mode='grid', filter='all', minStars=0, autoAdv=true, zoomed=false, panX=0, panY=0, sample=true;
 const undo=[];
 let nextId=1;
@@ -632,11 +639,47 @@ const SKEY='cullroom:v1';
 let saved={};
 try{saved=JSON.parse(localStorage.getItem(SKEY)||'{}')||{}}catch(e){saved={}}
 let saveT=0;
-function persist(){clearTimeout(saveT);saveT=setTimeout(()=>{
-  for(const it of items){ if(it.sample) continue; if(it.f||it.s||it.userRot) saved[it.key]={f:it.f,s:it.s,r:it.userRot||0}; else delete saved[it.key]; }
-  try{localStorage.setItem(SKEY,JSON.stringify(saved))}catch(e){}
-  saveSession();
-},300)}
+function persist(now){
+  clearTimeout(saveT);
+  const run=()=>{
+    for(const it of items){ if(it.sample) continue; if(it.f||it.s||it.userRot) saved[it.key]={f:it.f,s:it.s,r:it.userRot||0}; else delete saved[it.key]; }
+    try{localStorage.setItem(SKEY,JSON.stringify(saved))}catch(e){}
+    saveSession();
+    writeShoot(false);
+  };
+  if(now) run(); else saveT=setTimeout(run,150);
+}
+/* the save file inside the shoot folder (desktop app) */
+function shootSaveData(){
+  if(sample||!items.length) return null;
+  const flags={}; for(const it of items){ if(it.f||it.s||it.userRot) flags[it.key]={f:it.f,s:it.s,r:it.userRot||0}; }
+  let session=null;
+  if(RD&&RD.card==='resume') session=lastShootSave&&lastShootSave.session||null;
+  else if(RD&&RD.sig) session={sig:RD.sig,round:RD.round,i:RD.i,card:RD.card,last:RD.last||null,queue:RD.queue.map(x=>x.key),dec:[...RD.dec].map(([x,v])=>[x.key,v]),total:items.length,savedAt:Date.now()};
+  return {app:'Last Shot Standing',v:1,savedAt:Date.now(),flags,session};
+}
+function writeShoot(sync){
+  if(!window.lss||!window.lss.save||!shootRootAbs) return;
+  const d=shootSaveData(); if(!d) return;
+  const json=JSON.stringify(d);
+  try{ sync?window.lss.saveSync(shootRootAbs,json):window.lss.save(shootRootAbs,json) }catch(e){}
+}
+addEventListener('beforeunload',()=>{ if(saveT){ clearTimeout(saveT); saveT=0; } try{ for(const it of items){ if(it.sample) continue; if(it.f||it.s||it.userRot) saved[it.key]={f:it.f,s:it.s,r:it.userRot||0}; else delete saved[it.key]; } localStorage.setItem(SKEY,JSON.stringify(saved)); saveSession(); }catch(e){} writeShoot(true); });
+async function restoreShootSave(){
+  if(!window.lss||!window.lss.remember) return false;
+  const withAbs=items.filter(i=>i.abs&&!i.sample); if(!withAbs.length) return false;
+  shootRootAbs=deskRoot(withAbs);
+  try{ await window.lss.remember(shootRootAbs) }catch(e){}
+  let sv=null; try{ sv=await window.lss.loadSave(shootRootAbs) }catch(e){}
+  lastShootSave=sv;
+  if(!sv) { persist(true); return false; }
+  for(const it of items){ const fl=sv.flags&&sv.flags[it.key]; if(fl){ it.f=fl.f||0; it.s=fl.s||0; it.userRot=fl.r||0; it.rot=(it.baseRot+it.userRot)%360; } }
+  rebuild(false);
+  const local=findSession(), file=sv.session&&sv.session.queue&&sv.session.queue.length?sv.session:null;
+  const pick=file&&local?(local.savedAt>file.savedAt?local:file):(file||local);
+  if(pick){ lastShootSave={...sv,session:pick}; resumeFrom(pick); return true }
+  return false;
+}
 
 /* ---------- JPEG / TIFF parsing ---------- */
 function walkJpeg(u,s,full){ // returns {start,end,w,h,sof,exif}
@@ -735,7 +778,7 @@ async function addFiles(files){
     if(IMG.has(e)&&rawBase.has(f.name.replace(/\.[^.]+$/,'').toLowerCase())) continue;
     const key=f.name+':'+f.size; if(seen.has(key)) continue; seen.add(key);
     const sv=saved[key]||{};
-    fresh.push({id:nextId++,key,file:f,abs:(window.lss?window.lss.pathFor(f):''),path:(f.webkitRelativePath||f._rel||f.name),name:f.name,raw:RAW.has(e),f:sv.f||0,s:sv.s||0,userRot:sv.r||0,rot:0,baseRot:0,pw:0,ph:0,thumb:null,url:null,meta:{},time:Infinity,err:null});
+    fresh.push({id:nextId++,key,file:f,abs:(window.lss?(f.abs||window.lss.pathFor(f)):''),path:(f.webkitRelativePath||f._rel||f.name),name:f.name,raw:RAW.has(e),f:sv.f||0,s:sv.s||0,userRot:sv.r||0,rot:0,baseRot:0,pw:0,ph:0,thumb:null,url:null,meta:{},time:Infinity,err:null});
   }
   fresh.sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true}));
   items.push(...fresh);
@@ -750,6 +793,7 @@ async function addFiles(files){
   numberFrames(); computeBursts(); rebuild(false, keep);
   const bad=fresh.filter(i=>i.err).length;
   msg(bad?`Indexed ${total-bad} frames. ${bad} had no readable preview.`:`Indexed ${total} frames.`);
+  if(await restoreShootSave()) return;
   const ses=findSession(); if(ses){resumeFrom(ses);return}
   startRounds(bad?`${bad} file${bad>1?'s':''} had no readable preview and ${bad>1?'were':'was'} left out.`:'');
 }
@@ -779,14 +823,14 @@ async function processItem(it){
       }
       if(p.exif!==null){ const pt=readTiff(dv,p.exif,{}); if(pt[0x112]&&pt[0x112]!==1) hasOwnOri=true; for(const k in pt) if(!(k in tags)) tags[k]=pt[k]; }
       it.baseRot=hasOwnOri?0:(ORI[tags[0x112]]||0);
-      it.blob=it.file.slice(p.start,p.end,'image/jpeg');
-      it.url=URL.createObjectURL(it.blob);
+      if(it.file.disk){ it.blob=null; it.url=it.file.slice(p.start,p.end,'image/jpeg').url; }
+      else { it.blob=it.file.slice(p.start,p.end,'image/jpeg'); it.url=URL.createObjectURL(it.blob); }
     }else{
       const u=new Uint8Array(await it.file.slice(0,262144).arrayBuffer());
       if(u[0]===0xFF&&u[1]===0xD8){ const r=walkJpeg(u,0,false); if(r&&r.exif!==null) readTiff(new DataView(u.buffer),r.exif,tags); }
       it.baseRot=0;
-      it.blob=it.file;
-      it.url=URL.createObjectURL(it.file);
+      if(it.file.disk){ const ext=extOf(it.name); it.blob=null; it.url=it.file.url(null,null,ext==='png'?'image/png':ext==='webp'?'image/webp':ext==='heic'||ext==='heif'?'image/heic':'image/jpeg'); }
+      else { it.blob=it.file; it.url=URL.createObjectURL(it.file); }
     }
     it.meta=tags;
     const dt=tags[0x9003]||tags[0x132];
@@ -796,7 +840,7 @@ async function processItem(it){
   }catch(e){ it.err='No preview'; }
 }
 async function makeThumb(it){
-  let bmp; try{bmp=await createImageBitmap(it.blob)}catch(e){it.err='Can’t decode';return}
+  let bmp; try{const src=it.blob||await (await fetch(it.url)).blob();bmp=await createImageBitmap(src)}catch(e){it.err='Can’t decode';return}
   it.pw=bmp.width; it.ph=bmp.height;
   const L=520, sc=Math.min(1,L/Math.max(it.pw,it.ph));
   const w=Math.round(it.pw*sc), h=Math.round(it.ph*sc);
@@ -1186,7 +1230,7 @@ function roundCard(kind){
     b=`<button class="btn primary big" data-a="undo">Undo last <kbd>⌫</kbd></button><button class="btn big" data-a="exit">Back to grid</button>`;
   }
   rCard.innerHTML=`<div class="rbox"><span class="label">${eyebrow}</span><h2>${h}</h2><p>${p}</p><div class="rbtns">${b}</div></div>`;
-  updateRHud(); persist();
+  updateRHud(); persist(true);
 }
 rCard.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(b)cardAction(b.dataset.a)});
 function closeCard(){rCard.hidden=true;RD.card=null;$('#rLast').innerHTML=''}
@@ -1668,7 +1712,15 @@ async function loadSample(){
   numberFrames(); computeBursts(); rebuild(false);
   startRounds();
 }
-loadSample();
+(async()=>{
+  if(window.lss&&window.lss.lastShoot){
+    try{
+      const last=await window.lss.lastShoot();
+      if(last&&last.files&&last.files.length){ addFiles(last.files.map(f=>new DiskFile(f,last.name))); return; }
+    }catch(e){}
+  }
+  loadSample();
+})();
 })();
 </script>
 </body>

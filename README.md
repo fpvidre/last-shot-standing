@@ -32,7 +32,7 @@ The app isn't code-signed yet, so your computer will warn you the first time.
 - **Bursts:** frames shot within a second of each other are grouped, with a dot for each frame in the top bar.
 - **Auto-reject skipped:** flip the switch in the top bar and any frame you skip or don't reach is rejected when the round ends, instead of coming back. Sorting moves those frames too. Undo on the round summary puts them back.
 - **Settings** (⌘ , or Ctrl ,): choose the swipe speed (Quick, Default or Slow) and set Keep and Reject to any key you like. Keys the app already uses are blocked so nothing clashes.
-- **Pick up later:** progress saves as you go. Import the same folder again to resume where you stopped.
+- **Never lose a round:** progress is saved to a hidden file inside the shoot folder (`.lastshotstanding.json`), written safely to disk after every keep or reject and immediately at the end of each round. If the app closes or the computer shuts down, reopen Last Shot Standing and it picks up your last shoot right where you left off.
 - **Sorting:** rejects (or keepers) move into their own folder along with matching .JPG and .XMP files. A file only moves if its name and size still match the cull.
 
 Supports the embedded previews in Sony (ARW), Canon (CR2, CR3), Nikon (NEF), Fujifilm (RAF), DNG, Olympus, Panasonic and Pentax RAW files, plus JPG.
